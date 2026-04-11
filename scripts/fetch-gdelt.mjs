@@ -1,67 +1,50 @@
-import { REGION_GROUPS, COUNTRY_FIPS, GDELT_THEMES, GDELT_CONFIG, TIER1_DOMAINS } from './config.mjs';
+import { TIER1_DOMAINS } from './config.mjs';
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const BASE_URL = 'https://api.gdeltproject.org/api/v2/doc/doc';
+
 /**
- * GDELT DOC 2.0 API 쿼리 URL 생성
- * 쿼리를 짧게 유지하기 위해 테마 3개씩만 사용
+ * 단순 쿼리 3개만 실행 (배치 수 최소화)
+ * - 쿼리가 짧을수록 GDELT 성공률 높음
+ * - 6개 지역 배치 대신 키워드 기반 3개 쿼리로 변경
  */
-function buildQueryUrl(fipsCodes) {
-  const countryFilter = fipsCodes.map(c => `sourcecountry:${c}`).join(' OR ');
-  // 핵심 테마만 사용 (쿼리 길이 제한 대응)
-  const coreThemes = ['MILITARY', 'TRADE', 'SANCTION'];
-  const themeFilter = coreThemes.map(t => `theme:${t}`).join(' OR ');
-  const query = `(${countryFilter}) (${themeFilter}) sourcelang:eng`;
+const QUERIES = [
+  {
+    label: '군사/분쟁',
+    query: 'theme:MILITARY sourcelang:eng',
+  },
+  {
+    label: '무역/제재',
+    query: 'theme:TRADE sourcelang:eng',
+  },
+  {
+    label: '외교/에너지',
+    query: '(theme:DIPLOMACY OR theme:SANCTION) sourcelang:eng',
+  }
+];
 
+async function fetchOne(query, label) {
   const params = new URLSearchParams({
     query,
     mode: 'artlist',
-    maxrecords: String(GDELT_CONFIG.maxRecords),
+    maxrecords: '250',
     format: 'json',
-    timespan: GDELT_CONFIG.timespan
+    timespan: '72h'
   });
+  const url = `${BASE_URL}?${params.toString()}`;
 
-  return `${GDELT_CONFIG.baseUrl}?${params.toString()}`;
-}
-
-function buildGlobalQueryUrl(themes) {
-  const themeFilter = themes.map(t => `theme:${t}`).join(' OR ');
-  const query = `(${themeFilter}) sourcelang:eng`;
-
-  const params = new URLSearchParams({
-    query,
-    mode: 'artlist',
-    maxrecords: String(GDELT_CONFIG.maxRecords),
-    format: 'json',
-    timespan: GDELT_CONFIG.timespan
-  });
-
-  return `${GDELT_CONFIG.baseUrl}?${params.toString()}`;
-}
-
-async function fetchBatch(url, label, retries = 4) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  // 최대 3회 시도, 15초 간격
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      // 재시도 시 점진적으로 대기 시간 증가 (20s, 30s, 40s, 50s)
-      if (attempt > 0) {
-        const backoff = 20000 + (attempt * 10000);
-        console.log(`  [RETRY] ${label} — waiting ${backoff/1000}s (attempt ${attempt + 1}/${retries + 1})...`);
-        await sleep(backoff);
-      }
       const res = await fetch(url);
-
-      if (res.status === 429) {
-        console.warn(`  [RATE LIMIT] ${label}`);
-        continue;
-      }
-
       const text = await res.text();
 
-      // GDELT가 에러 메시지를 텍스트로 반환하는 경우
-      if (!text.startsWith('{') && !text.startsWith('[')) {
-        console.warn(`  [WARN] ${label}: non-JSON — "${text.slice(0, 60)}"`);
+      if (res.status === 429 || !text.startsWith('{')) {
+        console.warn(`  [RETRY] ${label} (${attempt}/3)`);
+        await sleep(15000);
         continue;
       }
 
@@ -71,15 +54,13 @@ async function fetchBatch(url, label, retries = 4) {
       return articles;
     } catch (err) {
       console.warn(`  [FAIL] ${label}: ${err.message}`);
+      await sleep(15000);
     }
   }
-  console.warn(`  [SKIP] ${label} — all retries exhausted`);
+  console.warn(`  [SKIP] ${label}`);
   return [];
 }
 
-/**
- * 기사에 Tier 태그 부착
- */
 function tagArticle(article) {
   const domain = (article.domain || '').toLowerCase();
   const isTier1 = TIER1_DOMAINS.has(domain) ||
@@ -91,9 +72,6 @@ function tagArticle(article) {
   };
 }
 
-/**
- * URL 기준 중복 제거
- */
 function deduplicateArticles(articles) {
   const seen = new Set();
   return articles.filter(a => {
@@ -103,58 +81,19 @@ function deduplicateArticles(articles) {
   });
 }
 
-/**
- * 메인: GDELT에서 지역 배치 + 글로벌 쿼리 실행
- */
 export async function fetchGdelt() {
   console.log('[GDELT] Starting fetch...');
   const allArticles = [];
-  const DELAY = 15000; // 15초 딜레이 (GDELT rate limit 대응)
 
-  // 6개 지역 배치 쿼리
-  for (let i = 0; i < REGION_GROUPS.length; i++) {
-    const group = REGION_GROUPS[i];
-    const fipsCodes = group.countries.map(id => COUNTRY_FIPS[id]).filter(Boolean);
-
-    // 국가가 6개 이상이면 분할
-    if (fipsCodes.length > 5) {
-      const mid = Math.ceil(fipsCodes.length / 2);
-      const batch1 = fipsCodes.slice(0, mid);
-      const batch2 = fipsCodes.slice(mid);
-
-      const url1 = buildQueryUrl(batch1);
-      const articles1 = await fetchBatch(url1, `${group.label}-1`);
-      allArticles.push(...articles1);
-      await sleep(DELAY);
-
-      const url2 = buildQueryUrl(batch2);
-      const articles2 = await fetchBatch(url2, `${group.label}-2`);
-      allArticles.push(...articles2);
-    } else {
-      const url = buildQueryUrl(fipsCodes);
-      const articles = await fetchBatch(url, group.label);
-      allArticles.push(...articles);
-    }
-
-    if (i < REGION_GROUPS.length - 1) await sleep(DELAY);
+  for (let i = 0; i < QUERIES.length; i++) {
+    const q = QUERIES[i];
+    if (i > 0) await sleep(10000); // 쿼리 간 10초 대기
+    const articles = await fetchOne(q.query, q.label);
+    allArticles.push(...articles);
   }
 
-  // 글로벌 테마 쿼리 2개 (DIPLOMACY/ENERGY + ECON)
-  await sleep(DELAY);
-  const globalUrl1 = buildGlobalQueryUrl(['DIPLOMACY', 'ENERGY_CORE_COMMODITIES']);
-  const global1 = await fetchBatch(globalUrl1, '글로벌-외교/에너지');
-  allArticles.push(...global1);
-
-  await sleep(DELAY);
-  const globalUrl2 = buildGlobalQueryUrl(['ECON_ECONPREVLI', 'MILITARY']);
-  const global2 = await fetchBatch(globalUrl2, '글로벌-경제/군사');
-  allArticles.push(...global2);
-
-  // 중복 제거 + Tier 태깅
   const unique = deduplicateArticles(allArticles);
   const tagged = unique.map(tagArticle);
-
-  // Tier 1을 상단으로 정렬
   tagged.sort((a, b) => a.tier - b.tier);
 
   const t1Count = tagged.filter(a => a.tier === 1).length;
