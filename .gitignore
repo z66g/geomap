@@ -1,0 +1,10 @@
+node_modules/
+.env
+data/gdelt-raw.json
+
+# 이전에 추출한 임시 파일들
+countries.js
+connections.js
+news.js
+news_fallback.js
+rel_constants.js

@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    { "source": "/api/news", "destination": "/data/news.json" },
+    { "source": "/api/country-updates", "destination": "/data/country-updates.json" }
+  ],
+  "headers": [
+    {
+      "source": "/data/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}

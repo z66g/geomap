@@ -1,0 +1,14 @@
+{
+  "name": "geomap-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pipeline": "node scripts/run-pipeline.mjs",
+    "fetch": "node scripts/fetch-gdelt.mjs",
+    "process": "node scripts/process-llm.mjs"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0"
+  }
+}
