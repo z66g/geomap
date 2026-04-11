@@ -41,15 +41,19 @@ function buildGlobalQueryUrl(themes) {
   return `${GDELT_CONFIG.baseUrl}?${params.toString()}`;
 }
 
-async function fetchBatch(url, label, retries = 2) {
+async function fetchBatch(url, label, retries = 4) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      if (attempt > 0) await sleep(12000);
+      // 재시도 시 점진적으로 대기 시간 증가 (20s, 30s, 40s, 50s)
+      if (attempt > 0) {
+        const backoff = 20000 + (attempt * 10000);
+        console.log(`  [RETRY] ${label} — waiting ${backoff/1000}s (attempt ${attempt + 1}/${retries + 1})...`);
+        await sleep(backoff);
+      }
       const res = await fetch(url);
 
       if (res.status === 429) {
-        console.warn(`  [RATE LIMIT] ${label} — waiting 15s...`);
-        await sleep(15000);
+        console.warn(`  [RATE LIMIT] ${label}`);
         continue;
       }
 
@@ -57,12 +61,8 @@ async function fetchBatch(url, label, retries = 2) {
 
       // GDELT가 에러 메시지를 텍스트로 반환하는 경우
       if (!text.startsWith('{') && !text.startsWith('[')) {
-        console.warn(`  [WARN] ${label}: non-JSON response — "${text.slice(0, 80)}"`);
-        if (attempt < retries) {
-          await sleep(15000);
-          continue;
-        }
-        return [];
+        console.warn(`  [WARN] ${label}: non-JSON — "${text.slice(0, 60)}"`);
+        continue;
       }
 
       const data = JSON.parse(text);
@@ -70,8 +70,7 @@ async function fetchBatch(url, label, retries = 2) {
       console.log(`  [OK] ${label}: ${articles.length} articles`);
       return articles;
     } catch (err) {
-      console.warn(`  [FAIL] ${label} attempt ${attempt + 1}: ${err.message}`);
-      if (attempt < retries) await sleep(12000);
+      console.warn(`  [FAIL] ${label}: ${err.message}`);
     }
   }
   console.warn(`  [SKIP] ${label} — all retries exhausted`);
@@ -110,7 +109,7 @@ function deduplicateArticles(articles) {
 export async function fetchGdelt() {
   console.log('[GDELT] Starting fetch...');
   const allArticles = [];
-  const DELAY = 10000; // 10초 딜레이 (GDELT rate limit 대응)
+  const DELAY = 15000; // 15초 딜레이 (GDELT rate limit 대응)
 
   // 6개 지역 배치 쿼리
   for (let i = 0; i < REGION_GROUPS.length; i++) {
