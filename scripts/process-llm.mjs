@@ -52,7 +52,7 @@ const countryUpdatesResponseSchema = {
 
 function buildNewsPrompt(articles) {
   const articleList = articles.slice(0, 500).map(a =>
-    `${a.tierTag} [${a.seendate}] [${a.sourcecountry}] [${a.domain}] ${a.title}`
+    `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
   return `당신은 한국 기관투자자를 위한 지정학 리스크 분석가입니다.
@@ -95,7 +95,7 @@ ${articleList}`;
 
 function buildCountryUpdatesPrompt(articles, currentCountries) {
   const articleList = articles.slice(0, 500).map(a =>
-    `${a.tierTag} [${a.seendate}] [${a.sourcecountry}] [${a.domain}] ${a.title}`
+    `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
   // 현재 국가 프로필에서 필요한 필드만 추출
@@ -116,11 +116,18 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
 ## 임무
 각 국가의 "summary"와 "watchlist"를 최신 뉴스 기반으로 갱신하세요.
 
+## 기사 데이터 형식
+각 기사는 다음과 같은 형식입니다:
+[T1/T2] [날짜] [관련국가코드] [매체명] 기사 제목
+- 관련국가코드는 FIPS 코드입니다 (US=미국, CH=중국, KS=한국, JA=일본, RS=러시아 등)
+- 제목에서 어떤 국가에 관한 뉴스인지 판단하세요
+
 ## 규칙
-1. 새로운 중요 뉴스가 있는 국가만 업데이트하세요
-2. 뉴스가 없거나 기존 정보와 변화가 없는 국가는 결과에서 제외하세요 (null이 아닌, 아예 키를 포함하지 마세요)
-3. summary: 현재 상황 한줄 요약, 120자 이내, 한국어
-4. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
+1. 뉴스에서 언급된 국가의 summary와 watchlist를 갱신하세요
+2. 최소 5개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp 등)은 적극적으로 업데이트하세요
+3. 뉴스가 전혀 없는 국가만 제외하세요
+4. summary: 현재 상황 한줄 요약, 120자 이내, 한국어
+5. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
    - icon: "📌"
    - text: "<b>이벤트명(시기)</b> — 트리거 조건 발생 시 → 구체적 투자 액션 힌트"
    - 예: "<b>미중 정상회담(5월)</b> — '관세 인상' 언급 시 → 반도체 섹터 비중 축소 검토"
