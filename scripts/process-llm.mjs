@@ -136,6 +136,19 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
 ## Source 신뢰도
 [T1] 매체 기사를 우선 참조하되, [T2]에서만 보도된 중요 이벤트도 반영하세요.
 
+## 출력 형식 (매우 중요 — 정확히 따르세요)
+반드시 아래와 같은 JSON 객체를 반환하세요. 키는 반드시 2글자 소문자 국가 ID입니다.
+배열이나 숫자 인덱스를 사용하지 마세요.
+
+출력 예시:
+{
+  "us": { "summary": "미국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] },
+  "cn": { "summary": "중국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] },
+  "kr": { "summary": "한국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] }
+}
+
+사용 가능한 국가 ID: us, cn, jp, kr, de, ru, in, sa, tw, ir, au, br, cl, ua, ng, cd, kp, gb, fr, tr, il, pk, vn, id, mx, pl, za, eg, ar, ca, my, sg, ae, th
+
 ## 현재 국가 프로필
 ${JSON.stringify(countryContext, null, 2)}
 
