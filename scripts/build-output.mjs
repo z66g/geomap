@@ -113,7 +113,7 @@ function loadPrevious(filename) {
 /**
  * 출력 파일 생성
  */
-export function buildOutput(newsItems, countryUpdates) {
+export function buildOutput(newsItems, countryUpdates, connectionUpdates = {}) {
   console.log('[BUILD] Validating and writing output...');
 
   const fetchedAtKr = getKstTimestamp();
@@ -151,9 +151,18 @@ export function buildOutput(newsItems, countryUpdates) {
       mergedUpdates[id] = data;
     }
 
+    // connections 업데이트 병합
+    const prevConnections = prev?.connections || {};
+    const mergedConnections = { ...prevConnections };
+    for (const [key, data] of Object.entries(connectionUpdates)) {
+      if (data && typeof data === 'object') {
+        mergedConnections[key] = data;
+      }
+    }
+
     countryOutput = {
       updates: mergedUpdates,
-      connections: {},
+      connections: mergedConnections,
       fetchedAtKr
     };
     console.log(`  [OK] country-updates.json: ${Object.keys(validUpdates).length} new, ${Object.keys(mergedUpdates).length} total`);

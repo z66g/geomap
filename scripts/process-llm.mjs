@@ -124,8 +124,8 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
 
 ## 규칙
 1. 뉴스에서 언급된 국가의 summary와 watchlist를 갱신하세요
-2. 최소 5개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp 등)은 적극적으로 업데이트하세요
-3. 뉴스가 전혀 없는 국가만 제외하세요
+2. 최소 15개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp, de, gb, fr, ir, il, ua, tw, in, sa, au)은 반드시 포함하세요
+3. 직접 관련 뉴스가 없더라도, 다른 국가의 뉴스가 해당 국가에 간접적으로 미치는 영향이 있으면 업데이트하세요 (예: 미-이란 긴장 → 한국·일본 에너지 수입 영향)
 4. summary: 현재 상황 한줄 요약, 120자 이내, 한국어
 5. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
    - icon: "📌"
@@ -204,5 +204,80 @@ export async function generateCountryUpdates(articles) {
 
   const updatedCount = Object.keys(updates).length;
   console.log(`[LLM] Country updates: ${updatedCount}/${COUNTRY_IDS.length} countries updated`);
+  return updates;
+}
+
+// ── Connections 업데이트 ──
+
+function buildConnectionsPrompt(articles) {
+  const articleList = articles.slice(0, 500).map(a =>
+    `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
+  ).join('\n');
+
+  const connectionsPath = new URL('../connections.json', import.meta.url);
+  const connections = JSON.parse(readFileSync(connectionsPath, 'utf8'));
+
+  // 주요 관계만 추출 (프롬프트 크기 제한)
+  const connContext = connections.map(c => ({
+    key: `${c.from}-${c.to}`,
+    from: c.from,
+    to: c.to,
+    type: c.type,
+    label: c.label,
+    note: c.rel?.note?.slice(0, 80) || '',
+    watch: c.rel?.watch?.slice(0, 80) || ''
+  }));
+
+  return `당신은 한국 기관투자자를 위한 지정학 관계 분석가입니다.
+
+아래에 최근 72시간 뉴스 메타데이터와 현재 86개 양자관계 프로필이 주어집니다.
+
+## 임무
+뉴스에서 변화가 감지된 양자관계의 note, watch, keyItems를 갱신하세요.
+
+## 규칙
+1. 뉴스에서 실제로 언급되거나 영향받는 관계만 업데이트하세요
+2. 최소 5개 이상의 관계를 업데이트하세요
+3. note: 현재 양자관계 상태 요약, 한국어, 100자 이내
+4. watch: 향후 주목할 이벤트와 투자 시사점, 한국어, 80자 이내
+5. keyItems: 핵심 이슈 2~4개, 각각 {l: "라벨", v: "현재 상태"} 형식
+
+## 출력 형식
+키는 반드시 "from-to" 형식 (예: "us-cn", "ru-ua")
+
+출력 예시:
+{
+  "us-cn": {
+    "note": "미중 기술 패권 경쟁 심화. 반도체 수출통제 확대.",
+    "watch": "5월 정상회담 결과 — 관세·희토류 협상이 테크주 방향 결정",
+    "keyItems": [{"l": "반도체", "v": "엔비디아 H200 수출 통제 강화"}]
+  }
+}
+
+## 현재 양자관계 목록
+${JSON.stringify(connContext, null, 2)}
+
+## 최근 기사 데이터
+${articleList}`;
+}
+
+export async function generateConnectionUpdates(articles) {
+  console.log('[LLM] Generating connection updates...');
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.3
+    }
+  });
+
+  const prompt = buildConnectionsPrompt(articles);
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  const updates = JSON.parse(text);
+
+  const updatedCount = Object.keys(updates).length;
+  console.log(`[LLM] Connection updates: ${updatedCount} relations updated`);
   return updates;
 }
