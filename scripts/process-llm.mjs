@@ -141,7 +141,7 @@ ${articleList}`;
 export async function generateNews(articles) {
   console.log('[LLM] Generating news...');
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: newsResponseSchema,
@@ -163,7 +163,7 @@ export async function generateCountryUpdates(articles) {
   const currentCountries = JSON.parse(readFileSync(countriesPath, 'utf8'));
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-pro',
+    model: 'gemini-2.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: countryUpdatesResponseSchema,
