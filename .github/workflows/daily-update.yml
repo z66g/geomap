@@ -2,13 +2,14 @@ name: Daily Geopolitical Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 매일 00:00 UTC = 09:00 KST
+    - cron: '0 0 * * *'  # 매일 00:00 UTC = 09:00 KST
+    - cron: '0 12 * * *' # 매일 12:00 UTC = 21:00 KST
   workflow_dispatch: # 수동 실행
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: write
 
@@ -33,5 +34,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --staged --quiet || git commit -m "chore: daily geopolitical update $(date -u +%Y-%m-%d)"
+          git diff --staged --quiet || git commit -m "chore: geopolitical update $(date -u +%Y-%m-%dT%H:%M)"
           git push
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Pipeline failed at $(date -u +%Y-%m-%dT%H:%M)Z"
+          echo "Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

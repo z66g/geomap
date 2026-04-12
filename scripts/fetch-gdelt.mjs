@@ -34,7 +34,7 @@ WHERE
   AND TranslationInfo IS NULL
   AND Extras IS NOT NULL
 ORDER BY DATE DESC
-LIMIT 800
+LIMIT 1500
 `;
 
 /**

@@ -51,7 +51,7 @@ const countryUpdatesResponseSchema = {
 // ── 프롬프트 빌더 ──
 
 function buildNewsPrompt(articles) {
-  const articleList = articles.slice(0, 500).map(a =>
+  const articleList = articles.slice(0, 700).map(a =>
     `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
@@ -61,7 +61,7 @@ function buildNewsPrompt(articles) {
 [T1]은 Reuters, Bloomberg, AP 등 Tier 1 공신력 매체, [T2]는 기타 매체입니다.
 
 ## 임무
-8~10건의 가장 중요한 지정학 이벤트를 선별하고, 한국어로 구조화된 뉴스 브리프를 작성하세요.
+12~15건의 가장 중요한 지정학 이벤트를 선별하고, 한국어로 구조화된 뉴스 브리프를 작성하세요.
 
 ## 선별 기준 (우선순위순)
 1. 무력 충돌, 군사 작전
@@ -94,7 +94,7 @@ ${articleList}`;
 }
 
 function buildCountryUpdatesPrompt(articles, currentCountries) {
-  const articleList = articles.slice(0, 500).map(a =>
+  const articleList = articles.slice(0, 700).map(a =>
     `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
@@ -127,7 +127,17 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
 2. 최소 15개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp, de, gb, fr, ir, il, ua, tw, in, sa, au)은 반드시 포함하세요
 3. 직접 관련 뉴스가 없더라도, 다른 국가의 뉴스가 해당 국가에 간접적으로 미치는 영향이 있으면 업데이트하세요 (예: 미-이란 긴장 → 한국·일본 에너지 수입 영향)
 4. summary: 현재 상황 한줄 요약, 120자 이내, 한국어
-5. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
+5. rate: 중앙은행 금리 정보가 뉴스에 언급된 경우만 업데이트. 형식:
+   {"name": "중앙은행명", "val": "금리값%", "trend": "up|down|hold", "trendLabel": "인상|인하|동결", "note": "최근 결정 배경 50자 이내"}
+   금리 관련 뉴스가 없으면 rate 필드를 포함하지 마세요.
+6. riskScore: 0~100 정수. 지정학적 긴장도를 수치화하세요.
+   - 0~20: 안정 (큰 이슈 없음)
+   - 21~40: 관심 (잠재적 이슈 존재)
+   - 41~60: 경계 (활성 갈등/긴장)
+   - 61~80: 위험 (전쟁/제재/위기 진행중)
+   - 81~100: 극심 (대규모 전쟁/경제 위기)
+   모든 국가에 반드시 포함하세요.
+7. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
    - icon: "📌"
    - text: "<b>이벤트명(시기)</b> — 트리거 조건 발생 시 → 구체적 투자 액션 힌트"
    - 예: "<b>미중 정상회담(5월)</b> — '관세 인상' 언급 시 → 반도체 섹터 비중 축소 검토"
@@ -210,7 +220,7 @@ export async function generateCountryUpdates(articles) {
 // ── Connections 업데이트 ──
 
 function buildConnectionsPrompt(articles) {
-  const articleList = articles.slice(0, 500).map(a =>
+  const articleList = articles.slice(0, 700).map(a =>
     `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
