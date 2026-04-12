@@ -147,7 +147,12 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
   "kr": { "summary": "한국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] }
 }
 
-사용 가능한 국가 ID: us, cn, jp, kr, de, ru, in, sa, tw, ir, au, br, cl, ua, ng, cd, kp, gb, fr, tr, il, pk, vn, id, mx, pl, za, eg, ar, ca, my, sg, ae, th
+사용 가능한 국가 ID (반드시 이 중에서만 사용):
+us=미국, cn=중국, jp=일본, kr=한국, de=독일, ru=러시아, in=인도, sa=사우디,
+tw=대만, ir=이란, au=호주, br=브라질, cl=칠레, ua=우크라이나, ng=나이지리아,
+cd=콩고, kp=북한, gb=영국(uk 아님!), fr=프랑스, tr=튀르키예, il=이스라엘(is 아님!),
+pk=파키스탄, vn=베트남, id=인도네시아, mx=멕시코, pl=폴란드, za=남아공,
+eg=이집트, ar=아르헨티나, ca=캐나다, my=말레이시아, sg=싱가포르, ae=UAE, th=태국
 
 ## 현재 국가 프로필
 ${JSON.stringify(countryContext, null, 2)}

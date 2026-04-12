@@ -43,6 +43,27 @@ function validateNews(newsItems) {
   return newsItems;
 }
 
+// LLM이 자주 틀리는 국가 코드 자동 보정
+const ID_CORRECTIONS = {
+  uk: 'gb', britain: 'gb', england: 'gb',
+  is: 'il', israel: 'il',
+  ch: 'cn', china: 'cn',
+  ja: 'jp', japan: 'jp',
+  ks: 'kr', korea: 'kr',
+  rs: 'ru', russia: 'ru',
+  gm: 'de', germany: 'de',
+  sf: 'za', southafrica: 'za',
+  as: 'au', australia: 'au',
+  up: 'ua', ukraine: 'ua',
+  tu: 'tr', turkey: 'tr', turkiye: 'tr',
+  vm: 'vn', vietnam: 'vn',
+  ci: 'cl', chile: 'cl',
+  ni: 'ng', nigeria: 'ng',
+  cg: 'cd', congo: 'cd',
+  kn: 'kp', northkorea: 'kp',
+  sn: 'sg', singapore: 'sg',
+};
+
 /**
  * 국가 업데이트 검증
  */
@@ -54,7 +75,13 @@ function validateCountryUpdates(updates) {
   const validIds = new Set(COUNTRY_IDS);
   const validatedUpdates = {};
 
-  for (const [id, data] of Object.entries(updates)) {
+  for (let [id, data] of Object.entries(updates)) {
+    // ID 자동 보정
+    id = id.toLowerCase().trim();
+    if (ID_CORRECTIONS[id]) {
+      console.log(`  [FIX] ${id} → ${ID_CORRECTIONS[id]}`);
+      id = ID_CORRECTIONS[id];
+    }
     if (!validIds.has(id)) {
       console.warn(`  [WARN] Unknown country ID: ${id} — skipping`);
       continue;
