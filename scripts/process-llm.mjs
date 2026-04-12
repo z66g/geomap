@@ -169,11 +169,12 @@ export async function generateCountryUpdates(articles) {
   const countriesPath = new URL('../countries.json', import.meta.url);
   const currentCountries = JSON.parse(readFileSync(countriesPath, 'utf8'));
 
+  // country-updates는 동적 키(country id)라 strict schema 사용 불가
+  // JSON 모드만 사용하고 스키마는 프롬프트로 제어
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
-      responseSchema: countryUpdatesResponseSchema,
       temperature: 0.3
     }
   });
