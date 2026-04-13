@@ -2419,7 +2419,7 @@ const wrap=document.getElementById("globe-wrap");
 let W=wrap.clientWidth,H=wrap.clientHeight;
 // Equirectangular: rotate()로 경도 이동 가능 → 무한 좌우 스크롤
 // 모든 요소(지도, 마커, 연결선)가 동일 projection 사용 → 자동 연동
-const projection=d3.geoEquirectangular().scale(Math.min(W,H)*0.35).translate([W/2,H*0.42]).rotate([0,0,0]);
+const projection=d3.geoEquirectangular().scale(Math.min(W,H)*0.35).translate([W/2,H*0.58]).rotate([0,0,0]);
 const path=d3.geoPath().projection(projection);
 
 const gGlobe=svg.append("g");
@@ -2605,7 +2605,7 @@ svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touche
 wrap.addEventListener("wheel",e=>{e.preventDefault();const ns=Math.max(80,Math.min(800,projection.scale()-e.deltaY*0.8));projection.scale(ns);render();},{passive:false});
 document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Math.min(800,projection.scale()*1.2);projection.scale(ns);render();});
 document.getElementById("btn-zoom-out").addEventListener("click",()=>{const ns=Math.max(80,projection.scale()/1.2);projection.scale(ns);render();});
-document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.35).translate([W/2,H*0.42]).rotate([0,0,0]);render();});
+document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.35).translate([W/2,H*0.58]).rotate([0,0,0]);render();});
 function rotateTo(lng,lat){
   // 좌우만 이동 (경도 rotate)
   const sr=projection.rotate(), er=[-lng,0,0];
