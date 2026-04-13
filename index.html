@@ -2934,6 +2934,32 @@ applyTheme(localStorage.getItem("geomap-theme")==="light");
 themeBtn.addEventListener("click",()=>{
   applyTheme(!document.documentElement.classList.contains("light"));
 });
+
+// ── 보안: 콘텐츠 보호 ──
+// 1. 우클릭 차단
+document.addEventListener("contextmenu",e=>e.preventDefault());
+
+// 2. 키보드 단축키 차단 (F12, Ctrl+Shift+I/J/C, Ctrl+U)
+document.addEventListener("keydown",e=>{
+  if(e.key==="F12")e.preventDefault();
+  if(e.ctrlKey&&e.shiftKey&&["I","i","J","j","C","c"].includes(e.key))e.preventDefault();
+  if(e.ctrlKey&&["u","U","s","S"].includes(e.key))e.preventDefault();
+  if(e.metaKey&&e.altKey&&["I","i","J","j","C","c"].includes(e.key))e.preventDefault(); // Mac
+  if(e.metaKey&&["u","U","s","S"].includes(e.key))e.preventDefault(); // Mac
+});
+
+// 3. 텍스트 선택/복사/드래그 차단
+document.addEventListener("selectstart",e=>e.preventDefault());
+document.addEventListener("copy",e=>e.preventDefault());
+document.addEventListener("dragstart",e=>e.preventDefault());
+
+// 4. 콘솔 로그 제거 (프로덕션)
+if(location.hostname!=="localhost"){
+  console.log=()=>{};console.warn=()=>{};console.info=()=>{};console.debug=()=>{};
+}
+
+// 5. iframe 임베드 차단
+if(window.top!==window.self){window.top.location=window.self.location;}
 </script>
 </body>
 </html>
