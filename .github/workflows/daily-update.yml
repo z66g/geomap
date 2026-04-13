@@ -2,8 +2,7 @@ name: Daily Geopolitical Update
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 매일 00:00 UTC = 09:00 KST
-    - cron: '0 12 * * *' # 매일 12:00 UTC = 21:00 KST
+    - cron: '0 22 * * *' # 매일 22:00 UTC = 07:00 KST (미국 마감 후, 아시아 개장 전)
   workflow_dispatch: # 수동 실행
 
 jobs:
