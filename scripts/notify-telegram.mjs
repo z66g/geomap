@@ -16,25 +16,23 @@ export async function sendTelegram(newsItems, countryCount, connCount, elapsed) 
   const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const timeStr = `${now.getUTCFullYear()}.${String(now.getUTCMonth()+1).padStart(2,'0')}.${String(now.getUTCDate()).padStart(2,'0')} ${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')} KST`;
 
-  // 뉴스 요약 (최대 5건)
+  // 뉴스 전체 요약
   let newsText = '';
-  if (newsItems && newsItems.length > 0) {
-    newsText = newsItems.slice(0, 5).map((n, i) =>
+  const total = newsItems?.length || 0;
+  if (total > 0) {
+    newsText = newsItems.map((n, i) =>
       `${i+1}. [${n.badgeText}] ${n.title}`
     ).join('\n');
   }
 
   const message = `🌐 *GEOMAP 업데이트 완료*
-📅 ${timeStr}
-⏱ ${elapsed}초 소요
+📅 ${timeStr} · ⏱ ${elapsed}초
 
-📰 *주요 뉴스 ${newsItems?.length || 0}건*
+📰 *뉴스 ${total}건*
 ${newsText || '(없음)'}
 
-🏳️ 국가 업데이트: ${countryCount}개국
-🔗 관계 업데이트: ${connCount}건
-
-🔗 [지도 보기](https://geomap.zbbg.kr)`;
+🏳️ 국가: ${countryCount}개국 · 🔗 관계: ${connCount}건
+[→ 지도 보기](https://geomap.zbbg.kr)`;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
