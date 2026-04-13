@@ -130,6 +130,57 @@ function deduplicateArticles(articles) {
   });
 }
 
+/**
+ * 제목 유사도 기반 중복 클러스터링
+ * 같은 이벤트를 다룬 기사를 하나로 합치고, T1 매체 기사를 대표로 선택
+ * Jaccard similarity > 0.4 이면 같은 이벤트로 판단
+ */
+function clusterByTitle(articles) {
+  // 제목 → 단어 Set 변환 (불용어 제거)
+  const stopWords = new Set(['the','a','an','in','on','at','to','for','of','and','or','is','are','was','were','has','have','had','with','from','by','as','its','it','that','this','be','but','not','no','will','can','may','would','could','should','after','before','over','under','into','about','says','said','new','also']);
+
+  function titleWords(title) {
+    return new Set(
+      title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+        .filter(w => w.length > 2 && !stopWords.has(w))
+    );
+  }
+
+  function jaccard(setA, setB) {
+    if (setA.size === 0 || setB.size === 0) return 0;
+    let intersection = 0;
+    for (const w of setA) { if (setB.has(w)) intersection++; }
+    return intersection / (setA.size + setB.size - intersection);
+  }
+
+  const clusters = []; // [{representative, words}]
+  const result = [];
+
+  for (const article of articles) {
+    const words = titleWords(article.title);
+    if (words.size < 2) { result.push(article); continue; }
+
+    let merged = false;
+    for (const cluster of clusters) {
+      if (jaccard(words, cluster.words) > 0.4) {
+        // 같은 클러스터 — T1이면 대표 교체
+        if (article.tier < cluster.representative.tier) {
+          cluster.representative = article;
+        }
+        merged = true;
+        break;
+      }
+    }
+    if (!merged) {
+      clusters.push({ representative: article, words });
+    }
+  }
+
+  // 클러스터 대표 기사만 반환
+  result.push(...clusters.map(c => c.representative));
+  return result;
+}
+
 export async function fetchGdelt() {
   console.log('[GDELT/BigQuery] Running query...');
 
@@ -156,11 +207,13 @@ export async function fetchGdelt() {
     return a.tone - b.tone;
   });
 
-  const t1Count = unique.filter(a => a.tier === 1).length;
-  const withTitle = unique.filter(a => !a.title.startsWith('[')).length;
-  console.log(`[GDELT/BigQuery] Done: ${unique.length} unique articles (T1: ${t1Count}, T2: ${unique.length - t1Count}, with title: ${withTitle})`);
+  // 제목 유사도 기반 중복 클러스터링 → 토큰 절감
+  const clustered = clusterByTitle(unique);
 
-  return unique;
+  const t1Count = clustered.filter(a => a.tier === 1).length;
+  console.log(`[GDELT/BigQuery] Done: ${unique.length} unique → ${clustered.length} clustered (T1: ${t1Count}, saved ${unique.length - clustered.length} duplicates)`);
+
+  return clustered;
 }
 
 // 직접 실행 시
