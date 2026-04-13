@@ -37,7 +37,8 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 
 /* ── TOP BRAND BAR ── */
 #brand-bar{height:44px;min-height:44px;background:rgba(6,6,6,0.92);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:20;flex-shrink:0;position:relative;backdrop-filter:blur(6px);}
-#brand-logo{font-size:11.5px;font-weight:800;letter-spacing:.12em;color:var(--blue);white-space:nowrap;text-shadow:0 0 12px rgba(255,255,255,0.3);}
+#brand-logo{font-size:23px;font-weight:800;letter-spacing:.12em;color:var(--blue);white-space:nowrap;text-shadow:0 0 12px rgba(255,255,255,0.3);}
+#brand-bar{justify-content:center;}
 .live-pip{display:flex;align-items:center;gap:5px;margin-left:2px;}
 .live-dot{width:6px;height:6px;border-radius:50%;background:#22ee66;box-shadow:0 0 7px #22ee66;animation:pdot 2s infinite;}
 @keyframes pdot{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -290,9 +291,11 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 .ln-body{font-size:10px;color:#bbb;line-height:1.5;}
 .ln-impact{font-size:9.5px;color:#ffd060;margin-top:3px;}
 .ln-refresh{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border2);flex-shrink:0;}
-.ln-refresh-btn{font-size:10px;padding:4px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:5px;color:var(--blue);cursor:pointer;transition:all .15s;}
-.ln-refresh-btn:hover{background:rgba(255,255,255,.1);}
+.ln-refresh-btn{font-size:14px;padding:4px;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;transition:all .2s;line-height:1;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
+.ln-refresh-btn:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.08);}
 .ln-refresh-btn:disabled{opacity:.4;cursor:default;}
+.ln-refresh-btn.spinning svg{animation:spin-refresh .8s linear infinite;}
+@keyframes spin-refresh{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .ln-status{font-size:9px;color:var(--muted);}
 #hint{position:absolute;top:11px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--muted);background:rgba(8,8,8,0.8);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;pointer-events:none;z-index:4;backdrop-filter:blur(6px);}
 </style>
@@ -380,7 +383,7 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
     <span class="ns-title">📡 이슈</span>
     <div class="ln-refresh">
       <span class="ln-status" id="ln-status">최신 뉴스를 불러옵니다...</span>
-      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()">🔄 새로고침</button>
+      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()" title="새로고침"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
     </div>
   </div>
   <div id="live-news-panel">
@@ -1838,7 +1841,7 @@ async function fetchLiveNews(){
   }
 
   btn.disabled=true;
-  btn.textContent="불러오는 중...";
+  btn.classList.add("spinning");
   status.textContent="분석 중...";
   panel.innerHTML='<div class="ln-loading"><div class="spin"></div><br>최신 지정학 뉴스 분석 중...</div>';
 
@@ -1866,7 +1869,7 @@ async function fetchLiveNews(){
     status.textContent="오프라인 데이터 (12시간 주기 업데이트)";
   }finally{
     btn.disabled=false;
-    btn.textContent="🔄 새로고침";
+    btn.classList.remove("spinning");
   }
 }
 
@@ -2387,13 +2390,20 @@ function selectCountry(c){
     `:''}
   `;
 
+  // 이전 포지션 저장 (닫을 때 복귀용)
+  const prevRotate=[...projection.rotate()];
+  const prevTranslate=[...projection.translate()];
+
   dw.querySelector(".d-close").addEventListener("click",()=>{
     dw.classList.remove("show");
     dw.innerHTML='<div class="d-empty">지도에서 마커를 클릭하거나<br>국가 목록에서 선택하세요</div>';
     document.querySelectorAll(".country-item").forEach(el=>el.classList.remove("active"));
     highlightConnections(null);
-    // 상세 닫으면 국가목록 복귀
     document.getElementById("country-section-wrap").style.display="";
+    // 원래 지도 포지션으로 복귀
+    const sr=projection.rotate(),st=projection.translate();
+    const ir=d3.interpolate(sr,prevRotate),it=d3.interpolate(st,prevTranslate);
+    d3.transition().duration(600).tween("restore",()=>t=>{projection.rotate(ir(t));projection.translate(it(t));render();});
   });
 
   // 국가목록 숨기고 상세 정보 표시 (인라인)
@@ -2581,14 +2591,14 @@ svg.on("mousedown",e=>{dragging=true;lastPos=[e.clientX,e.clientY];document.getE
    .on("mousemove",e=>{if(!dragging||!lastPos)return;
      const dx=e.clientX-lastPos[0], dy=e.clientY-lastPos[1];
      const r=projection.rotate(); projection.rotate([r[0]+dx/projection.scale()*50,r[1],r[2]]);
-     const t=projection.translate(); projection.translate([t[0],t[1]+dy]);
+     /* 상하 이동 잠금 — 좌우 무한스크롤만 */
      lastPos=[e.clientX,e.clientY];render();})
    .on("mouseup",()=>{dragging=false;lastPos=null;}).on("mouseleave",()=>{dragging=false;lastPos=null;});
 svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touches[0].clientX,e.touches[0].clientY];}})
    .on("touchmove",e=>{if(!dragging||!lastPos||e.touches.length!==1)return;e.preventDefault();
      const dx=e.touches[0].clientX-lastPos[0], dy=e.touches[0].clientY-lastPos[1];
      const r=projection.rotate(); projection.rotate([r[0]+dx/projection.scale()*50,r[1],r[2]]);
-     const t=projection.translate(); projection.translate([t[0],t[1]+dy]);
+     /* 상하 이동 잠금 — 좌우 무한스크롤만 */
      lastPos=[e.touches[0].clientX,e.touches[0].clientY];render();},{passive:false})
    .on("touchend",()=>{dragging=false;});
 // 2D 지도: 휠 줌
@@ -2597,13 +2607,10 @@ document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Ma
 document.getElementById("btn-zoom-out").addEventListener("click",()=>{const ns=Math.max(80,projection.scale()/1.2);projection.scale(ns);render();});
 document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.28).translate([W/2,H/2]).rotate([0,0,0]);render();});
 function rotateTo(lng,lat){
-  // 경도는 rotate로, 위도는 translate로 이동
+  // 좌우만 이동 (경도 rotate)
   const sr=projection.rotate(), er=[-lng,0,0];
-  const st=projection.translate();
-  const targetY=projection([0,0])[1]+(H/2-projection([0,lat])[1]);
-  const et=[st[0],targetY];
-  const ir=d3.interpolate(sr,er), it=d3.interpolate(st,et);
-  d3.transition().duration(600).tween("pan",()=>t=>{projection.rotate(ir(t));projection.translate(it(t));render();});
+  const ir=d3.interpolate(sr,er);
+  d3.transition().duration(600).tween("pan",()=>t=>{projection.rotate(ir(t));render();});
 }
 window.addEventListener("resize",()=>{W=wrap.clientWidth;H=wrap.clientHeight;projection.translate([W/2,H/2]);render();});
 </script>
