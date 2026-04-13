@@ -56,11 +56,12 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 
 /* ── SIDEBAR ── */
 #sidebar{width:var(--sidebar);min-width:var(--sidebar);background:rgba(8,8,8,0.85);border-right:1px solid var(--border2);display:flex;flex-direction:column;height:100%;overflow:hidden;z-index:10;backdrop-filter:blur(20px);}
-#logo{padding:11px 13px 9px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:7px;flex-shrink:0;}
-#logo-icon{font-size:16px;}
-#logo-text{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--blue);text-shadow:none;}
-#logo-sub{font-size:9px;color:var(--muted);margin-top:1px;}
-#tabs{display:flex;padding:6px 8px 0;gap:2px;border-bottom:1px solid var(--border2);flex-shrink:0;}
+/* 우측 이슈 사이드바 */
+#news-sidebar{width:320px;min-width:320px;background:rgba(8,8,8,0.85);border-left:1px solid var(--border2);display:flex;flex-direction:column;height:100%;overflow:hidden;z-index:10;backdrop-filter:blur(20px);}
+.ns-header{padding:10px 12px 8px;border-bottom:1px solid var(--border2);flex-shrink:0;}
+.ns-title{font-size:12px;font-weight:800;color:var(--text);letter-spacing:.05em;}
+#news-sidebar .ln-refresh{margin-top:6px;}
+#news-sidebar #live-news-panel{flex:1;overflow-y:auto;}
 .tab{flex:1;font-size:10px;padding:5px 2px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;text-align:center;white-space:nowrap;}
 .tab.active{color:var(--text);border-bottom-color:var(--blue);font-weight:700;}
 .tab:hover:not(.active){color:var(--text);}
@@ -308,73 +309,45 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 </div>
 
 <div id="main-layout">
-<!-- SIDEBAR -->
+<!-- LEFT SIDEBAR — 국가 목록 -->
 <div id="sidebar">
-  <div id="logo">
-    <div id="logo-icon">🛰</div>
-    <div><div id="logo-text">GEO MAP</div><div id="logo-sub">지정학 분석 지도 · assetx2</div></div>
-  </div>
-  <div id="tabs">
-    <button class="tab active" data-tab="map">지도</button>
-    <button class="tab" data-tab="news">이슈</button>
-    <button class="tab" data-tab="detail">국가정보</button>
-  </div>
-
-  <!-- 지도 탭 (레이어 + 패권 통합) -->
-  <div class="tab-panel active" id="tab-map">
-    <div id="filter-section">
-      <div class="filter-group">
-        <div class="sec-label">레이어</div>
-        <div class="f-chips">
-          <button class="f-btn active" data-layer="all"><span class="dot" style="background:#6a7090"></span>전체</button>
-          <button class="f-btn" data-layer="geopolitics"><span class="dot" style="background:#ff7043"></span>지정학</button>
-          <button class="f-btn" data-layer="resources"><span class="dot" style="background:#43e897"></span>자원</button>
-          <button class="f-btn" data-layer="industry"><span class="dot" style="background:#e8e8e8"></span>산업</button>
-          <button class="f-btn" data-layer="risk"><span class="dot" style="background:#ff4b6e"></span>리스크</button>
-        </div>
-      </div>
-      <div class="filter-group">
-        <div class="sec-label">패권 진영</div>
-        <div class="f-chips">
-          <button class="f-btn active" data-align="all">전체</button>
-          <button class="f-btn active" data-align="us">🇺🇸 친미</button>
-          <button class="f-btn active" data-align="swing">⚖️ 스윙</button>
-          <button class="f-btn active" data-align="cn">🇨🇳 CRINK</button>
-        </div>
+  <div id="filter-section">
+    <div class="filter-group">
+      <div class="sec-label">레이어</div>
+      <div class="f-chips">
+        <button class="f-btn active" data-layer="all"><span class="dot" style="background:#6a7090"></span>전체</button>
+        <button class="f-btn" data-layer="geopolitics"><span class="dot" style="background:#ff7043"></span>지정학</button>
+        <button class="f-btn" data-layer="resources"><span class="dot" style="background:#43e897"></span>자원</button>
+        <button class="f-btn" data-layer="industry"><span class="dot" style="background:#e8e8e8"></span>산업</button>
+        <button class="f-btn" data-layer="risk"><span class="dot" style="background:#ff4b6e"></span>리스크</button>
       </div>
     </div>
-    <div id="country-section-wrap" style="flex:1;overflow:hidden;position:relative;">
-      <div id="country-section">
-        <div class="sec-label" style="padding:5px 0 4px;">국가 목록</div>
-        <div id="country-list"></div>
+    <div class="filter-group">
+      <div class="sec-label">패권 진영</div>
+      <div class="f-chips">
+        <button class="f-btn active" data-align="all">전체</button>
+        <button class="f-btn active" data-align="us">🇺🇸 친미</button>
+        <button class="f-btn active" data-align="swing">⚖️ 스윙</button>
+        <button class="f-btn active" data-align="cn">🇨🇳 CRINK</button>
       </div>
-      <!-- 하단 페이드 — 스크롤 가능 표시 -->
-      <div id="scroll-fade"></div>
-      <!-- 커스텀 스크롤바 -->
-      <div id="scroll-track"><div id="scroll-thumb"></div></div>
     </div>
   </div>
-
-  <!-- 이슈 탭 — Claude API 자동 업데이트 -->
-  <div class="tab-panel" id="tab-news">
-    <div class="ln-refresh">
-      <span class="ln-status" id="ln-status">최신 뉴스를 불러옵니다...</span>
-      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()">🔄 새로고침</button>
+  <!-- 국가 목록 (기본) / 국가 상세 (클릭 시) -->
+  <div id="country-section-wrap" style="flex:1;overflow:hidden;position:relative;">
+    <div id="country-section">
+      <div class="sec-label" style="padding:5px 0 4px;">국가 목록</div>
+      <div id="country-list"></div>
     </div>
-    <div id="live-news-panel">
-      <div class="ln-loading"><div class="spin"></div><br>AI가 최신 지정학 뉴스를 분석 중...</div>
-    </div>
+    <div id="scroll-fade"></div>
+    <div id="scroll-track"><div id="scroll-thumb"></div></div>
   </div>
-
-  <!-- 국가 정보 탭 -->
-  <div class="tab-panel" id="tab-detail">
-    <div id="detail-wrap">
-      <div class="d-empty">지도에서 마커를 클릭하거나<br>국가 목록에서 선택하세요</div>
-    </div>
+  <!-- 국가 상세 정보 (인라인, 기본 숨김) -->
+  <div id="detail-wrap">
+    <div class="d-empty">지도에서 마커를 클릭하거나<br>국가 목록에서 선택하세요</div>
   </div>
 </div>
 
-<!-- GLOBE -->
+<!-- CENTER — 지도 -->
 <div id="globe-wrap">
   <div id="hint">드래그로 회전 · 스크롤로 확대</div>
   <svg id="globe-svg"></svg>
@@ -399,6 +372,19 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
       <div class="leg-row"><div class="leg-line" style="background:rgba(29,185,84,0.87)"></div>경제·무역</div>
       <div class="leg-row"><div class="leg-line" style="background:repeating-linear-gradient(90deg,rgba(160,68,255,0.87) 0,rgba(160,68,255,0.87) 3px,transparent 3px,transparent 7px)"></div>경쟁</div>
     </div>
+  </div>
+</div>
+<!-- RIGHT SIDEBAR — 이슈 -->
+<div id="news-sidebar">
+  <div class="ns-header">
+    <span class="ns-title">📡 이슈</span>
+    <div class="ln-refresh">
+      <span class="ln-status" id="ln-status">최신 뉴스를 불러옵니다...</span>
+      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()">🔄 새로고침</button>
+    </div>
+  </div>
+  <div id="live-news-panel">
+    <div class="ln-loading"><div class="spin"></div><br>AI가 최신 지정학 뉴스를 분석 중...</div>
   </div>
 </div>
 </div><!-- /main-layout -->
@@ -1913,19 +1899,8 @@ const NEWS_FALLBACK=[
   {date:"2026.04.09",category:"금리",title:"PBoC 동결·위안화 약세",body:"인민은행 LPR 3.0% 10개월 연속 동결. 위안화 절하 압력 지속.",impact:"중국 부양책 한계. 소비재·부동산株 약세"}
 ];
 
-// 탭 전환
-document.querySelectorAll(".tab").forEach(tab=>{
-  tab.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById("tab-"+tab.dataset.tab).classList.add("active");
-    if(tab.dataset.tab==="news") fetchLiveNews();
-  });
-});
-
-// 초기: 폴백 즉시 표시
-setTimeout(()=>renderNews(NEWS_FALLBACK), 200);
+// 이슈 패널: 페이지 로드 시 자동 호출
+setTimeout(()=>{renderNews(NEWS_FALLBACK); fetchLiveNews();}, 200);
 
 
 // ── COMBINED FILTER ──
@@ -2417,12 +2392,12 @@ function selectCountry(c){
     dw.innerHTML='<div class="d-empty">지도에서 마커를 클릭하거나<br>국가 목록에서 선택하세요</div>';
     document.querySelectorAll(".country-item").forEach(el=>el.classList.remove("active"));
     highlightConnections(null);
+    // 상세 닫으면 국가목록 복귀
+    document.getElementById("country-section-wrap").style.display="";
   });
 
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
-  document.querySelector('[data-tab="detail"]').classList.add("active");
-  document.getElementById("tab-detail").classList.add("active");
+  // 국가목록 숨기고 상세 정보 표시 (인라인)
+  document.getElementById("country-section-wrap").style.display="none";
   rotateTo(c.lng,c.lat);
   highlightConnections(c.id);
 }
