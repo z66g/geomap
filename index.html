@@ -2416,7 +2416,7 @@ function selectCountry(c){
     dw.classList.remove("show");
     dw.innerHTML='<div class="d-empty">지도에서 마커를 클릭하거나<br>국가 목록에서 선택하세요</div>';
     document.querySelectorAll(".country-item").forEach(el=>el.classList.remove("active"));
-    if(viewMode==="power")highlightConnections(null);
+    highlightConnections(null);
   });
 
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
@@ -2424,7 +2424,7 @@ function selectCountry(c){
   document.querySelector('[data-tab="detail"]').classList.add("active");
   document.getElementById("tab-detail").classList.add("active");
   rotateTo(c.lng,c.lat);
-  if(viewMode==="power")highlightConnections(c.id);
+  highlightConnections(c.id);
 }
 
 
