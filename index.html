@@ -2705,13 +2705,26 @@ svg.on("mousedown",e=>{dragging=true;lastPos=[e.clientX,e.clientY];document.getE
      /* 상하 이동 잠금 — 좌우 무한스크롤만 */
      lastPos=[e.clientX,e.clientY];render();})
    .on("mouseup",()=>{dragging=false;lastPos=null;}).on("mouseleave",()=>{dragging=false;lastPos=null;});
-svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touches[0].clientX,e.touches[0].clientY];}})
-   .on("touchmove",e=>{if(!dragging||!lastPos||e.touches.length!==1)return;e.preventDefault();
-     const dx=e.touches[0].clientX-lastPos[0], dy=e.touches[0].clientY-lastPos[1];
+let pinchDist=0;
+svg.on("touchstart",e=>{
+     if(e.touches.length===1){dragging=true;lastPos=[e.touches[0].clientX,e.touches[0].clientY];}
+     if(e.touches.length===2){dragging=false;
+       pinchDist=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);}
+   })
+   .on("touchmove",e=>{e.preventDefault();
+     // 핀치 줌 (2 fingers)
+     if(e.touches.length===2){
+       const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+       if(pinchDist>0){const ns=Math.max(80,Math.min(800,projection.scale()*(d/pinchDist)));projection.scale(ns);render();}
+       pinchDist=d;return;
+     }
+     // 1 finger 팬
+     if(!dragging||!lastPos||e.touches.length!==1)return;
+     const dx=e.touches[0].clientX-lastPos[0];
      const r=projection.rotate(); projection.rotate([r[0]+dx/projection.scale()*50,r[1],r[2]]);
-     /* 상하 이동 잠금 — 좌우 무한스크롤만 */
-     lastPos=[e.touches[0].clientX,e.touches[0].clientY];render();},{passive:false})
-   .on("touchend",()=>{dragging=false;});
+     lastPos=[e.touches[0].clientX,e.touches[0].clientY];render();
+   },{passive:false})
+   .on("touchend",()=>{dragging=false;pinchDist=0;});
 // 2D 지도: 휠 줌
 wrap.addEventListener("wheel",e=>{e.preventDefault();const ns=Math.max(80,Math.min(800,projection.scale()-e.deltaY*0.8));projection.scale(ns);render();},{passive:false});
 document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Math.min(800,projection.scale()*1.2);projection.scale(ns);render();});
