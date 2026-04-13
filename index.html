@@ -361,7 +361,7 @@ html.light .mobile-overlay.show{background:rgba(0,0,0,0.3);}
   <span id="brand-logo"><span style="color:#00e676;font-weight:900;">G</span>EO<span style="color:#00e676;font-weight:900;">M</span>AP</span>
   <div class="live-pip"><div class="live-dot"></div><span class="live-txt">LIVE</span></div>
   <div style="position:absolute;right:50px;font-size:9px;color:var(--muted2);letter-spacing:.02em;">inspired by <a href="https://www.threads.com/@asset.x2" target="_blank" style="color:var(--muted2);text-decoration:none;border-bottom:1px solid var(--border);">@asset.x2</a></div>
-  <button id="theme-toggle" title="다크/라이트 전환" style="position:absolute;right:14px;background:none;border:1px solid var(--border2);border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;transition:all .2s;">🌙</button>
+  <button id="theme-toggle" title="다크/라이트 전환" style="position:absolute;right:14px;background:none;border:none;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .2s;padding:0;"></button>
 </div>
 
 <!-- 모바일 상단 탭 바 (데스크톱에서는 숨김) -->
@@ -2925,9 +2925,11 @@ window.addEventListener("resize",()=>{W=wrap.clientWidth;H=wrap.clientHeight;pro
 
 // ── 다크/라이트 테마 토글 ──
 const themeBtn=document.getElementById("theme-toggle");
+const sunSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const moonSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 function applyTheme(light){
   document.documentElement.classList.toggle("light",light);
-  themeBtn.textContent=light?"☀️":"🌙";
+  themeBtn.innerHTML=light?sunSvg:moonSvg;
   localStorage.setItem("geomap-theme",light?"light":"dark");
 }
 // 저장된 테마 복원
