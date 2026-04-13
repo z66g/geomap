@@ -2464,36 +2464,45 @@ const svgDefs=svg.append("defs");
 
 // ── 공급망 데이터 ──
 const SUPPLY_CHAINS=[
-  {id:"semiconductor",label:"반도체",color:"#42b4ff",width:2.2,
+  {id:"semiconductor",label:"🔬 반도체 공급망",color:"#42b4ff",width:2.2,
+   desc:"글로벌 반도체 공급망은 설계(미국)→소재(일본)→파운드리(대만)→패키징(말레이시아)→메모리(한국) 구조. 대만 TSMC가 첨단 파운드리 65%를 독점하여 최대 병목.",
+   bottleneck:"대만(TSMC 파운드리 65%) — 중국 봉쇄 시 글로벌 전자제품 생산 완전 중단",
+   risk:"미중 반도체 전쟁 격화 시 장비(ASML·도쿄일렉트론) 수출통제로 중국 자급 지연, 한국·대만 수혜",
    hops:[
-     {from:"cd",to:"tw",label:"코발트 → 팹"},
-     {from:"tw",to:"my",label:"웨이퍼 → 패키징"},
-     {from:"my",to:"kr",label:"패키징 → 메모리"},
-     {from:"kr",to:"us",label:"메모리 → 설계/소비"},
-     {from:"tw",to:"us",label:"파운드리 → 소비"},
-     {from:"jp",to:"tw",label:"소재/장비 → 팹"}
+     {from:"cd",to:"tw",label:"코발트 → 팹",vol:"코발트 연 $2.5B",detail:"콩고가 세계 코발트 70% 생산. 반도체·배터리 필수 소재"},
+     {from:"tw",to:"my",label:"웨이퍼 → 패키징",vol:"후공정 $38B 시장",detail:"TSMC 웨이퍼 → 말레이시아 인텔·ASE 패키징. 글로벌 후공정 13%"},
+     {from:"my",to:"kr",label:"패키징 → 메모리",vol:"HBM $20B 시장",detail:"삼성·SK하이닉스 HBM3E 메모리. AI 수요로 공급 부족"},
+     {from:"kr",to:"us",label:"메모리 → 설계/소비",vol:"메모리 수출 $130B",detail:"한국 메모리 → 미국 엔비디아·AMD·애플 최종 제품"},
+     {from:"tw",to:"us",label:"파운드리 → 소비",vol:"TSMC 매출 $90B",detail:"애플·엔비디아·퀄컴 첨단칩 90%가 TSMC 생산"},
+     {from:"jp",to:"tw",label:"소재/장비 → 팹",vol:"장비·소재 $45B",detail:"도쿄일렉트론·신에츠 → TSMC. 일본이 핵심 소재 53% 공급"}
    ]},
-  {id:"energy",label:"에너지",color:"#ff9f43",width:2.5,
+  {id:"energy",label:"⛽ 에너지 공급망",color:"#ff9f43",width:2.5,
+   desc:"글로벌 에너지는 중동(OPEC+)이 원유 40% 공급. 호르무즈 해협으로 세계 원유의 21%가 통과. 러시아-유럽 가스관은 우크라이나 전쟁으로 사실상 차단.",
+   bottleneck:"호르무즈 해협 — 봉쇄 시 원유 21%, LNG 25% 공급 차단. 유가 $150+ 가능",
+   risk:"이란-미국 갈등 장기화 시 에너지 수입국(한·일·EU) 경상수지 악화, 인플레 재점화",
    hops:[
-     {from:"sa",to:"eg",label:"원유 → 수에즈"},
-     {from:"ir",to:"in",label:"원유 → 정제"},
-     {from:"sa",to:"kr",label:"원유 → 소비"},
-     {from:"sa",to:"jp",label:"원유 → 소비"},
-     {from:"ru",to:"de",label:"가스 → 소비"},
-     {from:"au",to:"jp",label:"LNG → 소비"},
-     {from:"au",to:"kr",label:"LNG → 소비"},
-     {from:"ae",to:"in",label:"원유 → 정제"}
+     {from:"sa",to:"eg",label:"원유 → 수에즈",vol:"일 200만 배럴",detail:"사우디 원유 일부가 수에즈 운하 경유 유럽행. 수에즈 차단 시 아프리카 우회"},
+     {from:"ir",to:"in",label:"원유 → 정제",vol:"일 40만 배럴",detail:"이란 원유 → 인도 릴라이언스 정제. 미국 제재로 변동 큼"},
+     {from:"sa",to:"kr",label:"원유 → 소비",vol:"일 65만 배럴",detail:"한국 원유 수입 1위 사우디(29%). 호르무즈 봉쇄 시 직격"},
+     {from:"sa",to:"jp",label:"원유 → 소비",vol:"일 100만 배럴",detail:"일본 원유 수입 1위 사우디(39%). 중동 의존도 95%"},
+     {from:"ru",to:"de",label:"가스 → 소비",vol:"연 55BCM→15BCM",detail:"노르드스트림 파괴 후 러시아 가스 75% 감소. 독일 LNG 전환 중"},
+     {from:"au",to:"jp",label:"LNG → 소비",vol:"연 3,800만 톤",detail:"호주 → 일본 LNG 최대 공급국. 호르무즈 우회 대안"},
+     {from:"au",to:"kr",label:"LNG → 소비",vol:"연 1,200만 톤",detail:"호주 → 한국 LNG 공급 2위. 카타르 다음 대안"},
+     {from:"ae",to:"in",label:"원유 → 정제",vol:"일 30만 배럴",detail:"UAE → 인도 정유. 야스·무르반 경질유 중심"}
    ]},
-  {id:"rareearth",label:"희토류",color:"#a855f7",width:2.0,
+  {id:"rareearth",label:"⚙️ 희토류·광물 공급망",color:"#a855f7",width:2.0,
+   desc:"중국이 희토류 가공의 90%, 리튬 가공의 65%를 독점. EV·풍력·방산에 필수. 미국·EU가 탈중국 공급망 구축 중이나 5~10년 소요.",
+   bottleneck:"중국(가공 독점 90%) — 수출통제 발동 시 EV·방산 생산 차질. 2024년 갈륨·게르마늄 제한 선례",
+   risk:"미중 기술전쟁 확대 시 중국의 희토류 무기화 가능성. 한국·일본 배터리·자석 산업 타격",
    hops:[
-     {from:"cd",to:"cn",label:"코발트 채굴 → 가공"},
-     {from:"cl",to:"cn",label:"리튬 채굴 → 가공"},
-     {from:"au",to:"cn",label:"희토류 채굴 → 가공"},
-     {from:"cn",to:"jp",label:"가공 → 소재"},
-     {from:"cn",to:"kr",label:"가공 → 배터리"},
-     {from:"jp",to:"tw",label:"소재 → 부품"},
-     {from:"kr",to:"us",label:"배터리 → EV"},
-     {from:"cn",to:"de",label:"가공 → 제조"}
+     {from:"cd",to:"cn",label:"코발트 채굴 → 가공",vol:"코발트 70% 콩고산",detail:"콩고 채굴 → 중국 가공. 중국 기업 화유코발트가 콩고 광산 대거 확보"},
+     {from:"cl",to:"cn",label:"리튬 채굴 → 가공",vol:"리튬 26% 칠레산",detail:"칠레 아타카마 리튬 → 중국 가공. 세계 리튬 수요 연 20% 증가"},
+     {from:"au",to:"cn",label:"희토류 채굴 → 가공",vol:"희토류 채굴 2위",detail:"호주 라이너스 등 → 중국 가공. 탈중국 위해 호주 현지 가공 추진 중"},
+     {from:"cn",to:"jp",label:"가공 → 소재",vol:"영구자석 수입 80%",detail:"중국 네오디뮴 자석 → 일본 로봇·자동차. 2010년 수출 제한 트라우마"},
+     {from:"cn",to:"kr",label:"가공 → 배터리",vol:"양극재 원료 70%",detail:"중국 수산화리튬·코발트 → 한국 LG·삼성SDI 배터리"},
+     {from:"jp",to:"tw",label:"소재 → 부품",vol:"첨단소재 $12B",detail:"일본 전자소재 → 대만 TSMC·폭스콘 부품 제조"},
+     {from:"kr",to:"us",label:"배터리 → EV",vol:"EV 배터리 $25B",detail:"LG·삼성SDI → 미국 테슬라·GM·포드. IRA 보조금 수혜"},
+     {from:"cn",to:"de",label:"가공 → 제조",vol:"EV 부품 $8B",detail:"중국 CATL 배터리 → 독일 VW·BMW. EU 반보조금 조사 중"}
    ]}
 ];
 let activeSupplyChains=new Set();
@@ -2554,7 +2563,7 @@ function buildSupplyChains(){
   gSupply.selectAll("*").remove(); supplyEls={};
   SUPPLY_CHAINS.forEach(chain=>{
     const els=[];
-    chain.hops.forEach(hop=>{
+    chain.hops.forEach((hop,idx)=>{
       const f=COUNTRIES.find(c=>c.id===hop.from), t=COUNTRIES.find(c=>c.id===hop.to);
       if(!f||!t)return;
       const line=gSupply.append("path").attr("fill","none")
@@ -2562,25 +2571,55 @@ function buildSupplyChains(){
         .attr("stroke-dasharray","6,3").attr("opacity",0.85)
         .attr("marker-end",`url(#arrow-${chain.id})`)
         .attr("class","supply-line");
-      els.push({line,from:f,to:t});
+      // 클릭 히트 영역
+      const hit=gSupply.append("path").attr("fill","none")
+        .attr("stroke","transparent").attr("stroke-width",16).style("cursor","pointer");
+      hit.on("click",function(ev){ev.stopPropagation();showSupplyPopup(chain,hop,f,t,ev.clientX,ev.clientY);});
+      hit.on("mouseenter",()=>line.attr("stroke-width",chain.width*2).attr("opacity",1));
+      hit.on("mouseleave",()=>line.attr("stroke-width",chain.width).attr("opacity",0.85));
+      els.push({line,hit,from:f,to:t});
     });
     supplyEls[chain.id]=els;
   });
   updateSupplyChainVisibility();
 }
+function showSupplyPopup(chain,hop,f,t,mx,my){
+  const cpPopup=document.getElementById("conn-popup");
+  document.getElementById("cp-flags").textContent=`${f.flag}→${t.flag}`;
+  document.getElementById("cp-title").textContent=`${f.name} → ${t.name}`;
+  const ct=document.getElementById("cp-type");
+  ct.textContent=chain.label;ct.style.background=chain.color+"22";ct.style.color=chain.color;
+  document.getElementById("cp-body").innerHTML=`
+    <div><div class="cp-sec-label" style="color:${chain.color}">📦 구간 정보</div>
+      <div class="cp-row"><span class="cp-row-label">흐름</span><span class="cp-row-val">${hop.label}</span></div>
+      ${hop.vol?`<div class="cp-row"><span class="cp-row-label">규모</span><span class="cp-row-val">${hop.vol}</span></div>`:''}
+      ${hop.detail?`<div class="cp-note" style="margin-top:6px">${hop.detail}</div>`:''}</div>
+    <div><div class="cp-sec-label yellow">⚠️ 병목 리스크</div><div class="cp-note">${chain.bottleneck}</div></div>
+    <div><div class="cp-sec-label red">📊 투자 시사점</div><div class="cp-note">${chain.risk}</div></div>`;
+  const rect=document.getElementById("globe-wrap").getBoundingClientRect();
+  let px=mx-rect.left+16,py=my-rect.top-10;
+  if(px+315>rect.width)px=mx-rect.left-320;
+  if(py+420>rect.height)py=Math.max(10,rect.height-430);
+  cpPopup.style.left=px+"px";cpPopup.style.top=py+"px";
+  cpPopup.classList.add("show");
+}
 function updateSupplyChainPaths(){
   const gc=d3.geoPath().projection(projection);
   Object.values(supplyEls).forEach(hops=>{
-    hops.forEach(({line,from:f,to:t})=>{
+    hops.forEach(({line,hit,from:f,to:t})=>{
       const d=gc({type:"LineString",coordinates:[[f.lng,f.lat],[t.lng,t.lat]]})||"";
       line.attr("d",d);
+      if(hit)hit.attr("d",d);
     });
   });
 }
 function updateSupplyChainVisibility(){
   Object.entries(supplyEls).forEach(([id,hops])=>{
     const show=activeSupplyChains.has(id);
-    hops.forEach(({line})=>line.style("display",show?"":"none"));
+    hops.forEach(({line,hit})=>{
+      line.style("display",show?"":"none");
+      if(hit)hit.style("display",show?"":"none");
+    });
   });
 }
 
