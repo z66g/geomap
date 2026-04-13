@@ -84,6 +84,8 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 /* layer filter colors */
 .f-btn[data-layer]{border-color:rgba(255,255,255,0.15);color:var(--muted);}
 .f-btn[data-layer].active{border-color:rgba(255,255,255,.22);color:var(--text);background:rgba(255,255,255,.05);}
+.f-btn[data-supply]{border-color:rgba(255,255,255,0.15);color:var(--muted);}
+.f-btn[data-supply].active{border-color:rgba(255,255,255,.22);color:var(--text);background:rgba(255,255,255,.05);opacity:1;}
 /* align filter colors */
 .f-btn[data-align="all"]{border-color:rgba(255,255,255,0.15);color:var(--muted);}
 .f-btn[data-align="all"].active{border-color:rgba(255,255,255,.25);color:var(--text);background:rgba(255,255,255,.04);}
@@ -2572,6 +2574,24 @@ function updateSupplyChainVisibility(){
   Object.entries(supplyEls).forEach(([id,hops])=>{
     const show=activeSupplyChains.has(id);
     hops.forEach(({line})=>line.style("display",show?"":"none"));
+  });
+  // 병목 국가 하이라이트 — 활성 공급망에 포함된 국가 마커 강조
+  const chainCountries=new Set();
+  activeSupplyChains.forEach(id=>{
+    const chain=SUPPLY_CHAINS.find(s=>s.id===id);
+    if(!chain)return;
+    chain.hops.forEach(h=>{chainCountries.add(h.from);chainCountries.add(h.to);});
+  });
+  COUNTRIES.forEach(c=>{
+    const el=markerEls[c.id];if(!el)return;
+    if(activeSupplyChains.size>0){
+      const inChain=chainCountries.has(c.id);
+      el.glow.attr("stroke-width",inChain?4:1.5).attr("opacity",inChain?1:0.3);
+      el.inner.attr("r",inChain?4.5:3);
+    }else{
+      el.glow.attr("stroke-width",1.5).attr("opacity",1);
+      el.inner.attr("r",3);
+    }
   });
 }
 
