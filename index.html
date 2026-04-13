@@ -326,6 +326,14 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
       </div>
     </div>
     <div class="filter-group">
+      <div class="sec-label">공급망</div>
+      <div class="f-chips">
+        <button class="f-btn" data-supply="semiconductor"><span class="dot" style="background:#42b4ff"></span>반도체</button>
+        <button class="f-btn" data-supply="energy"><span class="dot" style="background:#ff9f43"></span>에너지</button>
+        <button class="f-btn" data-supply="rareearth"><span class="dot" style="background:#a855f7"></span>희토류</button>
+      </div>
+    </div>
+    <div class="filter-group">
       <div class="sec-label">패권 진영</div>
       <div class="f-chips">
         <button class="f-btn active" data-align="all">전체</button>
@@ -1915,6 +1923,15 @@ document.querySelectorAll(".f-btn[data-layer]").forEach(btn=>{
     updateMarkers();
   });
 });
+// 공급망 필터 토글
+document.querySelectorAll(".f-btn[data-supply]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const id=btn.dataset.supply;
+    if(activeSupplyChains.has(id)){activeSupplyChains.delete(id);btn.classList.remove("active");}
+    else{activeSupplyChains.add(id);btn.classList.add("active");}
+    updateSupplyChainVisibility();
+  });
+});
 document.querySelectorAll(".f-btn[data-align]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     const a=btn.dataset.align;
@@ -2424,8 +2441,54 @@ const path=d3.geoPath().projection(projection);
 
 const gGlobe=svg.append("g");
 const gConns=svg.append("g").attr("id","connections");
+const gSupply=svg.append("g").attr("id","supply-chains");
 const gLabels=svg.append("g").attr("id","labels");
 const gMarkers=svg.append("g").attr("id","markers");
+
+// ── 공급망 화살표 마커 ──
+const svgDefs=svg.append("defs");
+[{id:"semiconductor",color:"#42b4ff"},{id:"energy",color:"#ff9f43"},{id:"rareearth",color:"#a855f7"}].forEach(s=>{
+  svgDefs.append("marker").attr("id","arrow-"+s.id).attr("viewBox","0 0 10 10").attr("refX",9).attr("refY",5)
+    .attr("markerWidth",5).attr("markerHeight",5).attr("orient","auto")
+    .append("path").attr("d","M0 1L10 5L0 9z").attr("fill",s.color);
+});
+
+// ── 공급망 데이터 ──
+const SUPPLY_CHAINS=[
+  {id:"semiconductor",label:"반도체",color:"#42b4ff",width:2.2,
+   hops:[
+     {from:"cd",to:"tw",label:"코발트 → 팹"},
+     {from:"tw",to:"my",label:"웨이퍼 → 패키징"},
+     {from:"my",to:"kr",label:"패키징 → 메모리"},
+     {from:"kr",to:"us",label:"메모리 → 설계/소비"},
+     {from:"tw",to:"us",label:"파운드리 → 소비"},
+     {from:"jp",to:"tw",label:"소재/장비 → 팹"}
+   ]},
+  {id:"energy",label:"에너지",color:"#ff9f43",width:2.5,
+   hops:[
+     {from:"sa",to:"eg",label:"원유 → 수에즈"},
+     {from:"ir",to:"in",label:"원유 → 정제"},
+     {from:"sa",to:"kr",label:"원유 → 소비"},
+     {from:"sa",to:"jp",label:"원유 → 소비"},
+     {from:"ru",to:"de",label:"가스 → 소비"},
+     {from:"au",to:"jp",label:"LNG → 소비"},
+     {from:"au",to:"kr",label:"LNG → 소비"},
+     {from:"ae",to:"in",label:"원유 → 정제"}
+   ]},
+  {id:"rareearth",label:"희토류",color:"#a855f7",width:2.0,
+   hops:[
+     {from:"cd",to:"cn",label:"코발트 채굴 → 가공"},
+     {from:"cl",to:"cn",label:"리튬 채굴 → 가공"},
+     {from:"au",to:"cn",label:"희토류 채굴 → 가공"},
+     {from:"cn",to:"jp",label:"가공 → 소재"},
+     {from:"cn",to:"kr",label:"가공 → 배터리"},
+     {from:"jp",to:"tw",label:"소재 → 부품"},
+     {from:"kr",to:"us",label:"배터리 → EV"},
+     {from:"cn",to:"de",label:"가공 → 제조"}
+   ]}
+];
+let activeSupplyChains=new Set();
+let supplyEls={};
 
 gGlobe.append("path").datum(d3.geoGraticule()()).attr("class","graticule").attr("d",path);
 const topoScript=document.createElement("script");
@@ -2477,6 +2540,41 @@ const connColors={us:"rgba(26,58,143,0.90)",cn:"rgba(240,48,48,0.93)",swing:"rgb
   trade:"rgba(29,185,84,0.87)",compete:"rgba(160,68,255,0.87)"};
 const connWidths={us:2.0,cn:2.0,swing:1.4,ally:2.0,rival:2.6,tension:1.9,trade:1.6,compete:1.4};
 const connDash={us:"none",cn:"none",swing:"6,4",ally:"none",rival:"3,3",tension:"8,4",trade:"none",compete:"4,4"};
+// ── 공급망 렌더링 ──
+function buildSupplyChains(){
+  gSupply.selectAll("*").remove(); supplyEls={};
+  SUPPLY_CHAINS.forEach(chain=>{
+    const els=[];
+    chain.hops.forEach(hop=>{
+      const f=COUNTRIES.find(c=>c.id===hop.from), t=COUNTRIES.find(c=>c.id===hop.to);
+      if(!f||!t)return;
+      const line=gSupply.append("path").attr("fill","none")
+        .attr("stroke",chain.color).attr("stroke-width",chain.width)
+        .attr("stroke-dasharray","6,3").attr("opacity",0.85)
+        .attr("marker-end",`url(#arrow-${chain.id})`)
+        .attr("class","supply-line");
+      els.push({line,from:f,to:t});
+    });
+    supplyEls[chain.id]=els;
+  });
+  updateSupplyChainVisibility();
+}
+function updateSupplyChainPaths(){
+  const gc=d3.geoPath().projection(projection);
+  Object.values(supplyEls).forEach(hops=>{
+    hops.forEach(({line,from:f,to:t})=>{
+      const d=gc({type:"LineString",coordinates:[[f.lng,f.lat],[t.lng,t.lat]]})||"";
+      line.attr("d",d);
+    });
+  });
+}
+function updateSupplyChainVisibility(){
+  Object.entries(supplyEls).forEach(([id,hops])=>{
+    const show=activeSupplyChains.has(id);
+    hops.forEach(({line})=>line.style("display",show?"":"none"));
+  });
+}
+
 function buildConns(){
   gConns.selectAll("*").remove();connEls={};
   CONNECTIONS.forEach(conn=>{
@@ -2575,6 +2673,7 @@ function render(){
   gGlobe.selectAll(".graticule").attr("d",path);
   gGlobe.selectAll(".land").attr("d",path);
   updateConnPaths();
+  updateSupplyChainPaths();
   COUNTRIES.forEach(c=>{
     const el=markerEls[c.id];if(!el)return;
     const coords=projection([c.lng,c.lat]);if(!coords)return;
@@ -2583,7 +2682,7 @@ function render(){
   });
 }
 
-buildConns();buildMarkers();updateMarkers();render();
+buildConns();buildSupplyChains();buildMarkers();updateMarkers();render();
 
 let dragging=false,lastPos=null,autoRotate=false,viewMode="normal";
 // 2D 지도: 좌우 드래그 = rotation(경도 이동), 상하 드래그 = translate(위도 이동)
