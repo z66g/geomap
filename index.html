@@ -2674,7 +2674,7 @@ function updateMarkers(){
     const alignColor=ALIGN_C[c.align];
     el.inner.attr("fill",color);
     el.glow.attr("stroke",alignColor);
-    const layerOk=activeLayer==="all"||c.layer===activeLayer;
+    const layerOk=activeLayer==="all"||activeLayer==="none"||c.layer===activeLayer;
     const alignOk=activeAligns.size===0||activeAligns.has("all")||activeAligns.has(c.align);
     const show=layerOk&&alignOk;
     el.g.style("display",show?"":"none");
