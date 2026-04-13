@@ -1976,7 +1976,7 @@ async function fetchCountryUpdates() {
     countryUpdatesDate = data.fetchedAtKr || "";
 
     // COUNTRIES 배열의 동적 필드만 덮어씌우기
-    const DYNAMIC_FIELDS = ["summary","keywords","geo","rate","policy","watchlist","risk"];
+    const DYNAMIC_FIELDS = ["summary","keywords","geo","rate","policy","watchlist","risk","riskScore"];
     COUNTRIES.forEach(c => {
       const u = data.updates[c.id];
       if (!u) return;
@@ -2705,13 +2705,25 @@ function buildMarkers(){
     markerEls[c.id]={g,inner,glow,label};
   });
 }
+// Risk Score → 색상 변환 (초록 → 노랑 → 빨강)
+function riskColor(score){
+  if(score==null)return"#6a7090";
+  const s=Math.max(0,Math.min(100,score));
+  if(s<=40){const t=s/40;return`rgb(${Math.round(30+t*225)},${Math.round(200-t*80)},${Math.round(80-t*50)})`;}
+  return`rgb(${Math.round(255-((s-40)/60)*15)},${Math.round(120-((s-40)/60)*100)},${Math.round(30-((s-40)/60)*20)})`;
+}
 function updateMarkers(){
   COUNTRIES.forEach(c=>{
     const el=markerEls[c.id];if(!el)return;
-    const color=LAYER_COLORS[c.layer];
+    // 리스크 레이어 선택 시 riskScore 기반 색상
+    const color=(activeLayer==="risk")?riskColor(c.riskScore):LAYER_COLORS[c.layer];
     const alignColor=ALIGN_C[c.align];
     el.inner.attr("fill",color);
-    el.glow.attr("stroke",alignColor);
+    el.glow.attr("stroke",(activeLayer==="risk")?riskColor(c.riskScore):alignColor);
+    // 리스크 모드에서 마커 크기도 riskScore에 비례
+    const r=(activeLayer==="risk"&&c.riskScore!=null)?2.5+(c.riskScore/100)*3:3;
+    el.inner.attr("r",r);
+    el.glow.attr("r",r+3);
     const layerOk=activeLayer==="all"||activeLayer==="none"||c.layer===activeLayer;
     const alignOk=activeAligns.size===0||activeAligns.has("all")||activeAligns.has(c.align);
     const show=layerOk&&alignOk;
