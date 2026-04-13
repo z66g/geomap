@@ -1,6 +1,7 @@
 import { fetchGdelt } from './fetch-gdelt.mjs';
 import { generateNews, generateCountryUpdates, generateConnectionUpdates } from './process-llm.mjs';
 import { buildOutput } from './build-output.mjs';
+import { sendTelegram, sendTelegramError } from './notify-telegram.mjs';
 
 async function main() {
   const startTime = Date.now();
@@ -11,6 +12,7 @@ async function main() {
   // Step 1: GDELT에서 기사 수집
   const articles = await fetchGdelt();
   if (articles.length === 0) {
+    await sendTelegramError('GDELT에서 기사를 가져오지 못했습니다.');
     console.error('[PIPELINE] No articles fetched — aborting');
     process.exit(1);
   }
@@ -18,7 +20,6 @@ async function main() {
   // Step 2: LLM 처리 (3회 호출)
   let newsItems, countryUpdates, connectionUpdates;
 
-  // 뉴스 생성
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       newsItems = await generateNews(articles);
@@ -30,7 +31,6 @@ async function main() {
     }
   }
 
-  // 국가 업데이트 생성
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       countryUpdates = await generateCountryUpdates(articles);
@@ -42,7 +42,6 @@ async function main() {
     }
   }
 
-  // Connections 업데이트 생성
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       connectionUpdates = await generateConnectionUpdates(articles);
@@ -54,22 +53,28 @@ async function main() {
     }
   }
 
-  // 모두 실패하면 종료
   if (!newsItems && !countryUpdates && !connectionUpdates) {
+    await sendTelegramError('모든 LLM 호출이 실패했습니다. 이전 데이터를 유지합니다.');
     console.error('[PIPELINE] All LLM calls failed — keeping previous data');
     process.exit(1);
   }
 
   // Step 3: 출력 파일 생성
+  const countryCount = countryUpdates ? Object.keys(countryUpdates).length : 0;
+  const connCount = connectionUpdates ? Object.keys(connectionUpdates).length : 0;
   buildOutput(newsItems || [], countryUpdates || {}, connectionUpdates || {});
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log('='.repeat(50));
   console.log(`[PIPELINE] Completed in ${elapsed}s`);
   console.log('='.repeat(50));
+
+  // Step 4: Telegram 알림
+  await sendTelegram(newsItems, countryCount, connCount, elapsed);
 }
 
-main().catch(err => {
+main().catch(async err => {
   console.error('[PIPELINE] Fatal error:', err);
+  await sendTelegramError(`Fatal error: ${err.message}`);
   process.exit(1);
 });
