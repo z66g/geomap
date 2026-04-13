@@ -1812,7 +1812,14 @@ const ALIGN_BG={us:"rgba(56,190,255,.14)",cn:"rgba(255,75,110,.14)",swing:"rgba(
 const ALIGN_N={us:"친미",cn:"친중",swing:"스윙",neutral:"중립"};
 
 // ── FILTER STATE ──
-let activeLayer="all";
+// 레이어 → 관계선 타입 매핑
+const LAYER_CONN_MAP={
+  geopolitics:["ally","rival","tension"],
+  resources:["trade"],
+  industry:["trade","compete"],
+  risk:["rival","tension"]
+};
+let activeLayers=new Set(["all"]); // "all" = 전체, 또는 개별 레이어 Set
 let activeAligns=new Set(["all","us","cn","swing"]);
 
 // ── RENDER LISTS ──
@@ -1919,14 +1926,24 @@ setTimeout(()=>{renderNews(NEWS_FALLBACK); fetchLiveNews();}, 200);
 document.querySelectorAll(".f-btn[data-layer]").forEach(btn=>{
   btn.addEventListener("click",()=>{
     const layer=btn.dataset.layer;
-    if(layer==="all" && activeLayer==="all"){
-      // "전체" 재클릭 → 모두 숨김 (공급망만 볼 때 유용)
-      activeLayer="none";
-      document.querySelectorAll(".f-btn[data-layer]").forEach(b=>b.classList.remove("active"));
+    if(layer==="all"){
+      if(activeLayers.has("all")){
+        // "전체" 재클릭 → 모두 숨김
+        activeLayers.clear();
+        document.querySelectorAll(".f-btn[data-layer]").forEach(b=>b.classList.remove("active"));
+      } else {
+        // "전체" 클릭 → 전체 활성화
+        activeLayers=new Set(["all"]);
+        document.querySelectorAll(".f-btn[data-layer]").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+      }
     } else {
-      document.querySelectorAll(".f-btn[data-layer]").forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      activeLayer=layer;
+      // 개별 레이어 토글
+      activeLayers.delete("all");
+      document.querySelector('.f-btn[data-layer="all"]').classList.remove("active");
+      if(activeLayers.has(layer)){activeLayers.delete(layer);btn.classList.remove("active");}
+      else{activeLayers.add(layer);btn.classList.add("active");}
+      // 아무것도 선택 안 됐으면 그냥 빈 상태 유지
     }
     updateMarkers();
     updateConnVisibility();
@@ -2656,14 +2673,24 @@ function updateConnPaths(){
   });
 }
 function updateConnVisibility(){
+  // 활성 레이어에 해당하는 관계선 타입 Set 구축
+  const visibleTypes=new Set();
+  if(activeLayers.has("all")){
+    ["ally","rival","tension","trade","compete"].forEach(t=>visibleTypes.add(t));
+  } else {
+    activeLayers.forEach(layer=>{
+      (LAYER_CONN_MAP[layer]||[]).forEach(t=>visibleTypes.add(t));
+    });
+  }
   CONNECTIONS.forEach(conn=>{
     const el=connEls[`${conn.from}-${conn.to}`];if(!el)return;
-    // 레이어가 "none"이면 모든 관계선 숨김
-    if(activeLayer==="none"){el.line.style("visibility","hidden");el.hit.style("visibility","hidden");return;}
+    // 레이어 타입 필터
+    const typeOk=visibleTypes.has(conn.type);
+    // 진영 필터
     const fa=COUNTRIES.find(c=>c.id===conn.from),ta=COUNTRIES.find(c=>c.id===conn.to);
-    if(!fa||!ta)return;
-    const fVis=activeAligns.size===0||activeAligns.has("all")||activeAligns.has(fa.align)||activeAligns.has(ta.align);
-    el.line.style("visibility",fVis?"":"hidden");el.hit.style("visibility",fVis?"":"hidden");
+    const alignOk=!fa||!ta||activeAligns.size===0||activeAligns.has("all")||activeAligns.has(fa.align)||activeAligns.has(ta.align);
+    const show=typeOk&&alignOk;
+    el.line.style("visibility",show?"":"hidden");el.hit.style("visibility",show?"":"hidden");
   });
 }
 function highlightConnections(id){
@@ -2715,20 +2742,17 @@ function riskColor(score){
 function updateMarkers(){
   COUNTRIES.forEach(c=>{
     const el=markerEls[c.id];if(!el)return;
-    // 리스크 레이어 선택 시 riskScore 기반 색상
-    const color=(activeLayer==="risk")?riskColor(c.riskScore):LAYER_COLORS[c.layer];
-    const alignColor=ALIGN_C[c.align];
+    // Risk Score 항상 마커에 반영 (색상 + 크기)
+    const color=riskColor(c.riskScore);
     el.inner.attr("fill",color);
-    el.glow.attr("stroke",(activeLayer==="risk")?riskColor(c.riskScore):alignColor);
-    // 리스크 모드에서 마커 크기도 riskScore에 비례
-    const r=(activeLayer==="risk"&&c.riskScore!=null)?2.5+(c.riskScore/100)*3:3;
+    el.glow.attr("stroke",color);
+    const r=(c.riskScore!=null)?2.5+(c.riskScore/100)*2.5:3;
     el.inner.attr("r",r);
     el.glow.attr("r",r+3);
-    const layerOk=activeLayer==="all"||activeLayer==="none"||c.layer===activeLayer;
+    // 국가 마커는 진영 필터만 적용 (레이어 필터는 관계선만)
     const alignOk=activeAligns.size===0||activeAligns.has("all")||activeAligns.has(c.align);
-    const show=layerOk&&alignOk;
-    el.g.style("display",show?"":"none");
-    el.label.style("display",show?"":"none");
+    el.g.style("display",alignOk?"":"none");
+    el.label.style("display",alignOk?"":"none");
   });
 }
 function render(){
