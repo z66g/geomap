@@ -2529,7 +2529,7 @@ let W=wrap.clientWidth,H=wrap.clientHeight;
 // Equirectangular: rotate()로 경도 이동 가능 → 무한 좌우 스크롤
 // 모든 요소(지도, 마커, 연결선)가 동일 projection 사용 → 자동 연동
 const isMobile=W<768;
-const initScale=isMobile?W*0.5:Math.min(W,H)*0.35;
+const initScale=isMobile?W*0.45:Math.min(W,H)*0.35;
 const initTy=isMobile?H*0.6:H*0.58;
 const projection=d3.geoEquirectangular().scale(initScale).translate([W/2,initTy]).rotate([0,0,0]);
 const path=d3.geoPath().projection(projection);
