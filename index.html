@@ -291,7 +291,7 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 .ln-body{font-size:10px;color:#bbb;line-height:1.5;}
 .ln-impact{font-size:9.5px;color:#ffd060;margin-top:3px;}
 .ln-refresh{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border2);flex-shrink:0;}
-.ln-refresh-btn{font-size:14px;padding:4px;background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;transition:all .2s;line-height:1;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;}
+.ln-refresh-btn{font-size:9px;padding:2px;background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;transition:all .2s;line-height:1;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
 .ln-refresh-btn:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.08);}
 .ln-refresh-btn:disabled{opacity:.4;cursor:default;}
 .ln-refresh-btn.spinning svg{animation:spin-refresh .8s linear infinite;}
@@ -380,10 +380,10 @@ body{background:#000005;color:var(--text);font-family:-apple-system,'Apple SD Go
 <!-- RIGHT SIDEBAR — 이슈 -->
 <div id="news-sidebar">
   <div class="ns-header">
-    <span class="ns-title">📡 이슈</span>
+    <span class="ns-title">🗞️ News</span>
     <div class="ln-refresh">
       <span class="ln-status" id="ln-status">최신 뉴스를 불러옵니다...</span>
-      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()" title="새로고침"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+      <button class="ln-refresh-btn" id="ln-refresh-btn" onclick="fetchLiveNews()" title="새로고침"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
     </div>
   </div>
   <div id="live-news-panel">
@@ -2419,7 +2419,7 @@ const wrap=document.getElementById("globe-wrap");
 let W=wrap.clientWidth,H=wrap.clientHeight;
 // Equirectangular: rotate()로 경도 이동 가능 → 무한 좌우 스크롤
 // 모든 요소(지도, 마커, 연결선)가 동일 projection 사용 → 자동 연동
-const projection=d3.geoEquirectangular().scale(Math.min(W,H)*0.28).translate([W/2,H/2]).rotate([0,0,0]);
+const projection=d3.geoEquirectangular().scale(Math.min(W,H)*0.35).translate([W/2,H*0.42]).rotate([0,0,0]);
 const path=d3.geoPath().projection(projection);
 
 const gGlobe=svg.append("g");
@@ -2605,7 +2605,7 @@ svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touche
 wrap.addEventListener("wheel",e=>{e.preventDefault();const ns=Math.max(80,Math.min(800,projection.scale()-e.deltaY*0.8));projection.scale(ns);render();},{passive:false});
 document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Math.min(800,projection.scale()*1.2);projection.scale(ns);render();});
 document.getElementById("btn-zoom-out").addEventListener("click",()=>{const ns=Math.max(80,projection.scale()/1.2);projection.scale(ns);render();});
-document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.28).translate([W/2,H/2]).rotate([0,0,0]);render();});
+document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.35).translate([W/2,H*0.42]).rotate([0,0,0]);render();});
 function rotateTo(lng,lat){
   // 좌우만 이동 (경도 rotate)
   const sr=projection.rotate(), er=[-lng,0,0];
