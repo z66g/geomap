@@ -20,7 +20,7 @@ function getNextUpdateKst() {
   const y = tomorrow.getUTCFullYear();
   const m = String(tomorrow.getUTCMonth() + 1).padStart(2, '0');
   const d = String(tomorrow.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${d} 09:00 KST`;
+  return `${y}-${m}-${d} 07:00 KST`;
 }
 
 /**
