@@ -2450,37 +2450,10 @@ function selectCountry(c){
 const svg=d3.select("#globe-svg");
 const wrap=document.getElementById("globe-wrap");
 let W=wrap.clientWidth,H=wrap.clientHeight;
-const projection=d3.geoOrthographic().scale(Math.min(W,H)*0.44).translate([W/2,H/2]).rotate([0,-20,0]).clipAngle(90);
+const projection=d3.geoNaturalEarth1().scale(Math.min(W,H)*0.28).translate([W/2,H/2]);
 const path=d3.geoPath().projection(projection);
 
-const defs=svg.append("defs");
-
-// ── 지구 본체 그라디언트 — 우상단 광원, 딥 네이비 계열 ──
-const rg=defs.append("radialGradient").attr("id","gGrad").attr("cx","62%").attr("cy","34%").attr("r","72%");
-rg.append("stop").attr("offset","0%").attr("stop-color","#1e2d50").attr("stop-opacity",1);
-rg.append("stop").attr("offset","38%").attr("stop-color","#111827").attr("stop-opacity",1);
-rg.append("stop").attr("offset","75%").attr("stop-color","#080d16").attr("stop-opacity",1);
-rg.append("stop").attr("offset","100%").attr("stop-color","#020408").attr("stop-opacity",1);
-
-// ── 반사광 — 오른쪽 상단 부드러운 하이라이트 ──
-const specGrad=defs.append("radialGradient").attr("id","specGrad").attr("cx","68%").attr("cy","30%").attr("r","35%");
-specGrad.append("stop").attr("offset","0%").attr("stop-color","rgba(180,200,255,0.12)");
-specGrad.append("stop").attr("offset","50%").attr("stop-color","rgba(140,170,240,0.04)");
-specGrad.append("stop").attr("offset","100%").attr("stop-color","transparent");
-
-// ── 가장자리 암부 — 구(球) 입체감 강화 ──
-const rimDark=defs.append("radialGradient").attr("id","rimDark").attr("cx","50%").attr("cy","50%").attr("r","50%");
-rimDark.append("stop").attr("offset","60%").attr("stop-color","transparent");
-rimDark.append("stop").attr("offset","85%").attr("stop-color","rgba(0,0,0,0.25)");
-rimDark.append("stop").attr("offset","100%").attr("stop-color","rgba(0,0,0,0.6)");
-
-
-// 지구 본체
-const globeSphere=svg.append("circle").attr("cx",W/2).attr("cy",H/2).attr("r",projection.scale()).attr("fill","url(#gGrad)");
-// 반사광 오버레이
-const specHighlight=svg.append("circle").attr("cx",W/2).attr("cy",H/2).attr("r",projection.scale()).attr("fill","url(#specGrad)").attr("pointer-events","none");
-// 가장자리 암부 오버레이 (대륙 위에 그려짐)
-const rimOverlay=svg.append("circle").attr("cx",W/2).attr("cy",H/2).attr("r",projection.scale()).attr("fill","url(#rimDark)").attr("pointer-events","none").style("z-index",10);
+// 2D 지도 — 3D 효과 요소 불필요
 const gGlobe=svg.append("g");
 const gConns=svg.append("g").attr("id","connections");
 const gLabels=svg.append("g").attr("id","labels");
@@ -2563,10 +2536,7 @@ function updateConnPaths(){
     const gc=d3.geoPath().projection(projection);
     const d=gc({type:"LineString",coordinates:[[f.lng,f.lat],[t.lng,t.lat]]})||"";
     el.line.attr("d",d);el.hit.attr("d",d);
-    const fa=d3.geoDistance([f.lng,f.lat],[-projection.rotate()[0],-projection.rotate()[1]]);
-    const ta=d3.geoDistance([t.lng,t.lat],[-projection.rotate()[0],-projection.rotate()[1]]);
-    const vis=fa<Math.PI/2||ta<Math.PI/2;
-    el.line.style("display",vis?"":"none");el.hit.style("display",vis?"":"none");
+    el.line.style("display","");el.hit.style("display","");
   });
 }
 function updateConnVisibility(){
@@ -2638,34 +2608,35 @@ function render(){
   COUNTRIES.forEach(c=>{
     const el=markerEls[c.id];if(!el)return;
     const coords=projection([c.lng,c.lat]);if(!coords)return;
-    const angle=d3.geoDistance([c.lng,c.lat],[-projection.rotate()[0],-projection.rotate()[1]]);
-    const vis=angle<Math.PI/2;
-    el.g.attr("transform",`translate(${coords[0]},${coords[1]})`).style("opacity",vis?1:0).style("pointer-events",vis?"all":"none");
-    const edgeFade=Math.max(0,Math.min(1,(Math.PI/2-angle)/(Math.PI/6)));
-    el.label.attr("x",coords[0]).attr("y",coords[1]+4).style("opacity",vis?edgeFade*0.85:0);
+    el.g.attr("transform",`translate(${coords[0]},${coords[1]})`).style("opacity",1).style("pointer-events","all");
+    el.label.attr("x",coords[0]).attr("y",coords[1]+4).style("opacity",0.85);
   });
 }
 
 buildConns();buildMarkers();updateMarkers();render();
 
-let dragging=false,lastPos=null,autoRotate=true,viewMode="normal";
-svg.on("mousedown",e=>{dragging=true;lastPos=[e.clientX,e.clientY];autoRotate=false;document.getElementById("hint").style.opacity="0";})
-   .on("mousemove",e=>{if(!dragging||!lastPos)return;const r=projection.rotate();projection.rotate([r[0]+(e.clientX-lastPos[0])*.3,Math.max(-80,Math.min(80,r[1]-(e.clientY-lastPos[1])*.3)),r[2]]);lastPos=[e.clientX,e.clientY];render();})
+let dragging=false,lastPos=null,autoRotate=false,viewMode="normal";
+// 2D 지도: 드래그로 팬(이동)
+svg.on("mousedown",e=>{dragging=true;lastPos=[e.clientX,e.clientY];document.getElementById("hint").style.opacity="0";})
+   .on("mousemove",e=>{if(!dragging||!lastPos)return;const t=projection.translate();projection.translate([t[0]+(e.clientX-lastPos[0]),t[1]+(e.clientY-lastPos[1])]);lastPos=[e.clientX,e.clientY];render();})
    .on("mouseup",()=>{dragging=false;lastPos=null;}).on("mouseleave",()=>{dragging=false;lastPos=null;});
-svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touches[0].clientX,e.touches[0].clientY];autoRotate=false;}})
-   .on("touchmove",e=>{if(!dragging||!lastPos||e.touches.length!==1)return;e.preventDefault();const r=projection.rotate();projection.rotate([r[0]+(e.touches[0].clientX-lastPos[0])*.3,Math.max(-80,Math.min(80,r[1]-(e.touches[0].clientY-lastPos[1])*.3)),r[2]]);lastPos=[e.touches[0].clientX,e.touches[0].clientY];render();},{passive:false})
+svg.on("touchstart",e=>{if(e.touches.length===1){dragging=true;lastPos=[e.touches[0].clientX,e.touches[0].clientY];}})
+   .on("touchmove",e=>{if(!dragging||!lastPos||e.touches.length!==1)return;e.preventDefault();const t=projection.translate();projection.translate([t[0]+(e.touches[0].clientX-lastPos[0]),t[1]+(e.touches[0].clientY-lastPos[1])]);lastPos=[e.touches[0].clientX,e.touches[0].clientY];render();},{passive:false})
    .on("touchend",()=>{dragging=false;});
-wrap.addEventListener("wheel",e=>{e.preventDefault();const ns=Math.max(120,Math.min(1400,projection.scale()-e.deltaY*1.8));projection.scale(ns);[globeSphere,specHighlight,rimOverlay].forEach(el=>el.attr("r",ns));render();},{passive:false});
-document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Math.min(1400,projection.scale()*1.2);projection.scale(ns);globeSphere.attr("r",ns);specHighlight.attr("r",ns);render();});
-document.getElementById("btn-zoom-out").addEventListener("click",()=>{const ns=Math.max(120,projection.scale()/1.2);projection.scale(ns);globeSphere.attr("r",ns);specHighlight.attr("r",ns);render();});
-document.getElementById("btn-reset").addEventListener("click",()=>{projection.rotate([0,-20,0]).scale(Math.min(W,H)*0.44);[globeSphere,specHighlight,rimOverlay].forEach(el=>el.attr("r",projection.scale()));render();autoRotate=true;});
+// 2D 지도: 휠 줌
+wrap.addEventListener("wheel",e=>{e.preventDefault();const ns=Math.max(80,Math.min(800,projection.scale()-e.deltaY*0.8));projection.scale(ns);render();},{passive:false});
+document.getElementById("btn-zoom-in").addEventListener("click",()=>{const ns=Math.min(800,projection.scale()*1.2);projection.scale(ns);render();});
+document.getElementById("btn-zoom-out").addEventListener("click",()=>{const ns=Math.max(80,projection.scale()/1.2);projection.scale(ns);render();});
+document.getElementById("btn-reset").addEventListener("click",()=>{projection.scale(Math.min(W,H)*0.28).translate([W/2,H/2]);render();});
 function rotateTo(lng,lat){
-  autoRotate=false;
-  const s=projection.rotate(),e=[-lng,Math.max(-80,Math.min(80,-lat)),0],ip=d3.interpolate(s,e);
-  d3.transition().duration(900).tween("rotate",()=>t=>{projection.rotate(ip(t));render();});
+  // 2D: 해당 국가를 화면 중앙으로 이동
+  const coords=projection([lng,lat]);if(!coords)return;
+  const t=projection.translate();
+  const target=[t[0]+(W/2-coords[0]),t[1]+(H/2-coords[1])];
+  const ip=d3.interpolate(t,target);
+  d3.transition().duration(600).tween("pan",()=>t=>{projection.translate(ip(t));render();});
 }
-setInterval(()=>{if(!autoRotate||dragging)return;const r=projection.rotate();projection.rotate([r[0]+0.08,r[1],r[2]]);render();},50);
-window.addEventListener("resize",()=>{W=wrap.clientWidth;H=wrap.clientHeight;projection.translate([W/2,H/2]);[globeSphere,specHighlight,rimOverlay].forEach(el=>el.attr("cx",W/2).attr("cy",H/2));render();});
+window.addEventListener("resize",()=>{W=wrap.clientWidth;H=wrap.clientHeight;projection.translate([W/2,H/2]);render();});
 </script>
 </body>
 </html>
