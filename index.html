@@ -2509,6 +2509,13 @@ function selectCountry(c){
     document.querySelectorAll(".country-item").forEach(el=>el.classList.remove("active"));
     highlightConnections(null);
     document.getElementById("country-section-wrap").style.display="";
+    // 모바일: 사이드바 닫기
+    if(window.innerWidth<=768){
+      document.getElementById("sidebar").classList.remove("mobile-show");
+      document.getElementById("mobile-overlay").classList.remove("show");
+      document.querySelectorAll(".m-tab").forEach(t=>t.classList.remove("active"));
+      document.querySelector('.m-tab[data-mtab="map"]').classList.add("active");
+    }
     // 원래 지도 포지션으로 복귀
     const sr=projection.rotate(),st=projection.translate();
     const ir=d3.interpolate(sr,prevRotate),it=d3.interpolate(st,prevTranslate);
@@ -2517,6 +2524,13 @@ function selectCountry(c){
 
   // 국가목록 숨기고 상세 정보 표시 (인라인)
   document.getElementById("country-section-wrap").style.display="none";
+  // 모바일: 사이드바 자동 열기
+  if(window.innerWidth<=768){
+    document.getElementById("sidebar").classList.add("mobile-show");
+    document.getElementById("mobile-overlay").classList.add("show");
+    document.querySelectorAll(".m-tab").forEach(t=>t.classList.remove("active"));
+    document.querySelector('.m-tab[data-mtab="countries"]').classList.add("active");
+  }
   rotateTo(c.lng,c.lat);
   highlightConnections(c.id);
 }
