@@ -31,8 +31,7 @@ export async function sendTelegram(newsItems, countryCount, connCount, elapsed) 
 📰 *뉴스 ${total}건*
 ${newsText || '(없음)'}
 
-🏳️ 국가: ${countryCount}개국 · 🔗 관계: ${connCount}건
-[→ 지도 보기](https://geomap.zbbg.kr)`;
+🏳️ 국가: ${countryCount}개국 · 🔗 관계: ${connCount}건`;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
