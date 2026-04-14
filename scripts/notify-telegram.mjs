@@ -56,6 +56,19 @@ ${newsText || '(없음)'}
   }
 }
 
+export async function sendTelegramStart() {
+  if (!BOT_TOKEN || !CHAT_ID) return;
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const timeStr = `${now.getUTCFullYear()}.${String(now.getUTCMonth()+1).padStart(2,'0')}.${String(now.getUTCDate()).padStart(2,'0')} ${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')} KST`;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, text: `⏳ GEOMAP 파이프라인 시작 (${timeStr})`, parse_mode: 'Markdown', disable_notification: true })
+    });
+  } catch { /* silent */ }
+}
+
 export async function sendTelegramError(errorMsg) {
   if (!BOT_TOKEN || !CHAT_ID) return;
 

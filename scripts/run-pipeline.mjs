@@ -1,13 +1,15 @@
 import { fetchGdelt } from './fetch-gdelt.mjs';
 import { generateNews, generateCountryUpdates, generateConnectionUpdates } from './process-llm.mjs';
 import { buildOutput } from './build-output.mjs';
-import { sendTelegram, sendTelegramError } from './notify-telegram.mjs';
+import { sendTelegram, sendTelegramError, sendTelegramStart } from './notify-telegram.mjs';
 
 async function main() {
   const startTime = Date.now();
   console.log('='.repeat(50));
   console.log(`[PIPELINE] Started at ${new Date().toISOString()}`);
   console.log('='.repeat(50));
+
+  await sendTelegramStart();
 
   // Step 1: GDELT에서 기사 수집
   const articles = await fetchGdelt();

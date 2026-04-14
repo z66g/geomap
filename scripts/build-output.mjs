@@ -3,24 +3,33 @@ import { COUNTRY_IDS } from './config.mjs';
 
 const DATA_DIR = new URL('../data/', import.meta.url).pathname;
 
-function getKstTimestamp() {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+function toKst(date) {
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000);
+}
+function fmtKst(kst) {
   const y = kst.getUTCFullYear();
   const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
   const d = String(kst.getUTCDate()).padStart(2, '0');
   const h = String(kst.getUTCHours()).padStart(2, '0');
   const min = String(kst.getUTCMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d} ${h}:${min} KST`;
+  return { y, m, d, h, min };
+}
+
+function getKstTimestamp() {
+  const k = fmtKst(toKst(new Date()));
+  return `${k.y}-${k.m}-${k.d} ${k.h}:${k.min} KST`;
 }
 
 function getNextUpdateKst() {
-  const now = new Date();
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000 + 9 * 60 * 60 * 1000);
-  const y = tomorrow.getUTCFullYear();
-  const m = String(tomorrow.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(tomorrow.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${d} 07:00 KST`;
+  // 현재 KST 시간 기준으로 다음 07:00 KST 계산
+  const kstNow = toKst(new Date());
+  const k = fmtKst(kstNow);
+  const kstHour = parseInt(k.h);
+  // 오늘 07:00이 아직 안 지났으면 오늘, 지났으면 내일
+  const daysToAdd = kstHour < 7 ? 0 : 1;
+  const next = new Date(kstNow.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+  const n = fmtKst(next);
+  return `${n.y}-${n.m}-${n.d} 07:00 KST`;
 }
 
 /**
