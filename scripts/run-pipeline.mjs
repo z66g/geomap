@@ -19,41 +19,29 @@ async function main() {
     process.exit(1);
   }
 
-  // Step 2: LLM 처리 (3회 호출)
+  // Step 2: LLM 처리 (5회 재시도, 30초 점진 대기)
+  const MAX_RETRIES = 5;
+  async function retryLLM(name, fn) {
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await fn();
+        return result;
+      } catch (err) {
+        const wait = 15000 * attempt; // 15s, 30s, 45s, 60s, 75s
+        console.error(`[PIPELINE] ${name} attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}`);
+        if (attempt < MAX_RETRIES) {
+          console.log(`[PIPELINE] Waiting ${wait/1000}s before retry...`);
+          await new Promise(r => setTimeout(r, wait));
+        }
+      }
+    }
+    return null;
+  }
+
   let newsItems, countryUpdates, connectionUpdates;
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      newsItems = await generateNews(articles);
-      break;
-    } catch (err) {
-      console.error(`[PIPELINE] News generation attempt ${attempt} failed: ${err.message}`);
-      if (attempt === 3) newsItems = null;
-      await new Promise(r => setTimeout(r, 5000 * attempt));
-    }
-  }
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      countryUpdates = await generateCountryUpdates(articles);
-      break;
-    } catch (err) {
-      console.error(`[PIPELINE] Country updates attempt ${attempt} failed: ${err.message}`);
-      if (attempt === 3) countryUpdates = null;
-      await new Promise(r => setTimeout(r, 5000 * attempt));
-    }
-  }
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      connectionUpdates = await generateConnectionUpdates(articles);
-      break;
-    } catch (err) {
-      console.error(`[PIPELINE] Connection updates attempt ${attempt} failed: ${err.message}`);
-      if (attempt === 3) connectionUpdates = null;
-      await new Promise(r => setTimeout(r, 5000 * attempt));
-    }
-  }
+  newsItems = await retryLLM('News', () => generateNews(articles));
+  countryUpdates = await retryLLM('Country updates', () => generateCountryUpdates(articles));
+  connectionUpdates = await retryLLM('Connection updates', () => generateConnectionUpdates(articles));
 
   if (!newsItems && !countryUpdates && !connectionUpdates) {
     await sendTelegramError('모든 LLM 호출이 실패했습니다. 이전 데이터를 유지합니다.');

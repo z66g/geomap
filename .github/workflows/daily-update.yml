@@ -2,7 +2,7 @@ name: Daily Geopolitical Update
 
 on:
   schedule:
-    - cron: '0 22 * * *' # 매일 22:00 UTC = 07:00 KST (미국 마감 후, 아시아 개장 전)
+    - cron: '17 22 * * *' # 매일 22:17 UTC = 07:17 KST (비정각 — GitHub 서버 부하 분산)
   workflow_dispatch: # 수동 실행
 
 jobs:
