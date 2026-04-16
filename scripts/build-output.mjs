@@ -25,11 +25,11 @@ function getNextUpdateKst() {
   const kstNow = toKst(new Date());
   const k = fmtKst(kstNow);
   const kstHour = parseInt(k.h);
-  // 오늘 07:00이 아직 안 지났으면 오늘, 지났으면 내일
-  const daysToAdd = kstHour < 7 ? 0 : 1;
+  // 오늘 19:13이 아직 안 지났으면 오늘, 지났으면 내일
+  const daysToAdd = kstHour < 19 ? 0 : 1;
   const next = new Date(kstNow.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
   const n = fmtKst(next);
-  return `${n.y}-${n.m}-${n.d} 07:13 KST`;
+  return `${n.y}-${n.m}-${n.d} 19:13 KST`;
 }
 
 /**
