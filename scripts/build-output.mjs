@@ -29,7 +29,7 @@ function getNextUpdateKst() {
   const daysToAdd = kstHour < 7 ? 0 : 1;
   const next = new Date(kstNow.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
   const n = fmtKst(next);
-  return `${n.y}-${n.m}-${n.d} 07:17 KST`;
+  return `${n.y}-${n.m}-${n.d} 07:13 KST`;
 }
 
 /**
