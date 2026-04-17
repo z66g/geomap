@@ -1,52 +1,34 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'fs';
 import { COUNTRY_IDS } from './config.mjs';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL = 'claude-haiku-4-5';
 
-// ── JSON 스키마 정의 (Structured Output) ──
+/**
+ * Claude 응답에서 JSON만 추출
+ * (간혹 ```json 코드블록으로 감싸서 반환하는 경우 대응)
+ */
+function extractJson(text) {
+  const trimmed = text.trim();
+  // 코드블록 제거
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) return codeBlockMatch[1];
+  // 첫 { 또는 [ 부터 끝까지 추출
+  const jsonStart = trimmed.search(/[{[]/);
+  if (jsonStart > 0) return trimmed.slice(jsonStart);
+  return trimmed;
+}
 
-const newsItemSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    date: { type: SchemaType.STRING, description: 'YYYY.MM.DD 형식' },
-    badge: { type: SchemaType.STRING, enum: ['risk', 'geo', 'ind', 'resource'] },
-    badgeText: { type: SchemaType.STRING, description: '한국어 카테고리 (전쟁, 지정학, 무역전쟁, 통화정책, 자원, 정책변화)' },
-    title: { type: SchemaType.STRING, description: '한국어 제목, 40자 이내, 핵심 수치 포함' },
-    body: { type: SchemaType.STRING, description: '한국어 본문, 2~3문장, 80자 이내' },
-    impact: { type: SchemaType.STRING, description: '자산군 명시 (환율/채권/주식/에너지/원자재). 예: KRW/USD 변동성 확대 + 에너지주 하방' }
-  },
-  required: ['date', 'badge', 'badgeText', 'title', 'body', 'impact']
-};
-
-const newsResponseSchema = {
-  type: SchemaType.ARRAY,
-  items: newsItemSchema
-};
-
-const watchlistItemSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    icon: { type: SchemaType.STRING },
-    text: { type: SchemaType.STRING, description: '<b>이벤트(날짜)</b> — 트리거 발생 시 → 액션 힌트 형식' }
-  },
-  required: ['icon', 'text']
-};
-
-const countryUpdateSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    summary: { type: SchemaType.STRING, description: '현재 상황 한줄 요약, 120자 이내' },
-    watchlist: { type: SchemaType.ARRAY, items: watchlistItemSchema }
-  },
-  required: ['summary', 'watchlist']
-};
-
-// country-updates는 동적 키(country id)를 가지므로 스키마를 유연하게 정의
-const countryUpdatesResponseSchema = {
-  type: SchemaType.OBJECT,
-  description: '국가별 업데이트. 키는 국가 ID (us, cn, kr 등). 변화 없는 국가는 포함하지 않음.'
-};
+async function callClaude(prompt, maxTokens = 4096) {
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    temperature: 0.3,
+    messages: [{ role: 'user', content: prompt }]
+  });
+  return msg.content[0].text;
+}
 
 // ── 프롬프트 빌더 ──
 
@@ -83,6 +65,16 @@ function buildNewsPrompt(articles) {
 - 에너지/원자재 (예: 브렌트유 상방, 금 안전자산 수요)
 복합적이면 여러 자산군을 함께 기술하세요.
 
+## 출력 형식 (매우 중요)
+반드시 순수 JSON 배열만 반환하세요. 설명이나 코드블록 마커 없이 JSON만.
+각 항목 필드:
+- date: "YYYY.MM.DD" 형식
+- badge: "risk" | "geo" | "ind" | "resource"
+- badgeText: 한국어 카테고리 (전쟁, 지정학, 무역전쟁, 통화정책, 자원, 정책변화)
+- title: 한국어 제목, 40자 이내, 핵심 수치 포함
+- body: 한국어 본문, 2~3문장, 80자 이내
+- impact: 자산군 명시 (환율/채권/주식/에너지/원자재)
+
 ## 참고 예시
 ${JSON.stringify([
   { date: "2026.04.07", badge: "risk", badgeText: "전쟁", title: "호르무즈 해협 봉쇄 — 브렌트유 110달러 상회", body: "이란 선박 통행 제한. 쿠웨이트 발전소 드론 공격. IEA '사상 최대 공급 충격'.", impact: "에너지 수입국(한·일·EU) 무역수지 악화. 브렌트유·WTI 상방. KRW/USD 상승 압력" },
@@ -98,7 +90,6 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
     `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
   ).join('\n');
 
-  // 현재 국가 프로필에서 필요한 필드만 추출
   const countryContext = currentCountries.map(c => ({
     id: c.id,
     name: c.name,
@@ -120,41 +111,26 @@ function buildCountryUpdatesPrompt(articles, currentCountries) {
 각 기사는 다음과 같은 형식입니다:
 [T1/T2] [날짜] [관련국가코드] [매체명] 기사 제목
 - 관련국가코드는 FIPS 코드입니다 (US=미국, CH=중국, KS=한국, JA=일본, RS=러시아 등)
-- 제목에서 어떤 국가에 관한 뉴스인지 판단하세요
 
 ## 규칙
 1. 뉴스에서 언급된 국가의 summary와 watchlist를 갱신하세요
-2. 최소 15개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp, de, gb, fr, ir, il, ua, tw, in, sa, au)은 반드시 포함하세요
-3. 직접 관련 뉴스가 없더라도, 다른 국가의 뉴스가 해당 국가에 간접적으로 미치는 영향이 있으면 업데이트하세요 (예: 미-이란 긴장 → 한국·일본 에너지 수입 영향)
+2. 최소 15개 이상의 국가를 업데이트하세요. 주요국(us, cn, ru, kr, jp, de, gb, fr, ir, il, ua, tw, in, sa, au)은 반드시 포함
+3. 직접 관련 뉴스가 없더라도 간접 영향이 있으면 업데이트
 4. summary: 현재 상황 한줄 요약, 120자 이내, 한국어
-5. rate: 중앙은행 금리 정보가 뉴스에 언급된 경우만 업데이트. 형식:
-   {"name": "중앙은행명", "val": "금리값%", "trend": "up|down|hold", "trendLabel": "인상|인하|동결", "note": "최근 결정 배경 50자 이내"}
-   금리 관련 뉴스가 없으면 rate 필드를 포함하지 마세요.
-6. riskScore: 0~100 정수. 지정학적 긴장도를 수치화하세요.
-   - 0~20: 안정 (큰 이슈 없음)
-   - 21~40: 관심 (잠재적 이슈 존재)
-   - 41~60: 경계 (활성 갈등/긴장)
-   - 61~80: 위험 (전쟁/제재/위기 진행중)
-   - 81~100: 극심 (대규모 전쟁/경제 위기)
-   모든 국가에 반드시 포함하세요.
-7. watchlist: 2~3개 항목. 각 항목은 다음 형식을 따르세요:
+5. rate: 중앙은행 금리 뉴스가 있을 때만 포함. 형식: {"name": "중앙은행명", "val": "금리값%", "trend": "up|down|hold", "trendLabel": "인상|인하|동결", "note": "배경 50자 이내"}
+6. riskScore: 0~100 정수 (0~20 안정, 21~40 관심, 41~60 경계, 61~80 위험, 81~100 극심). 모든 국가에 반드시 포함
+7. watchlist: 2~3개. 각 항목 형식:
    - icon: "📌"
    - text: "<b>이벤트명(시기)</b> — 트리거 조건 발생 시 → 구체적 투자 액션 힌트"
-   - 예: "<b>미중 정상회담(5월)</b> — '관세 인상' 언급 시 → 반도체 섹터 비중 축소 검토"
-   - 예: "<b>BOK 금통위(5/29)</b> — 인하 결정 시 → 부동산·건설주 반등 가능"
 
-## Source 신뢰도
-[T1] 매체 기사를 우선 참조하되, [T2]에서만 보도된 중요 이벤트도 반영하세요.
-
-## 출력 형식 (매우 중요 — 정확히 따르세요)
-반드시 아래와 같은 JSON 객체를 반환하세요. 키는 반드시 2글자 소문자 국가 ID입니다.
-배열이나 숫자 인덱스를 사용하지 마세요.
+## 출력 형식 (매우 중요)
+반드시 순수 JSON 객체만 반환하세요. 설명이나 코드블록 마커 없이 JSON만.
+키는 반드시 2글자 소문자 국가 ID입니다.
 
 출력 예시:
 {
-  "us": { "summary": "미국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] },
-  "cn": { "summary": "중국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] },
-  "kr": { "summary": "한국 현재 상황 요약", "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] }
+  "us": { "summary": "...", "riskScore": 65, "watchlist": [{"icon": "📌", "text": "<b>이벤트</b> — 설명"}] },
+  "cn": { "summary": "...", "riskScore": 55, "watchlist": [...] }
 }
 
 사용 가능한 국가 ID (반드시 이 중에서만 사용):
@@ -171,54 +147,6 @@ ${JSON.stringify(countryContext, null, 2)}
 ${articleList}`;
 }
 
-// ── LLM 호출 ──
-
-export async function generateNews(articles) {
-  console.log('[LLM] Generating news...');
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: newsResponseSchema,
-      temperature: 0.3
-    }
-  });
-
-  const prompt = buildNewsPrompt(articles);
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-  const news = JSON.parse(text);
-  console.log(`[LLM] News generated: ${news.length} items`);
-  return news;
-}
-
-export async function generateCountryUpdates(articles) {
-  console.log('[LLM] Generating country updates...');
-  const countriesPath = new URL('../countries.json', import.meta.url);
-  const currentCountries = JSON.parse(readFileSync(countriesPath, 'utf8'));
-
-  // country-updates는 동적 키(country id)라 strict schema 사용 불가
-  // JSON 모드만 사용하고 스키마는 프롬프트로 제어
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.3
-    }
-  });
-
-  const prompt = buildCountryUpdatesPrompt(articles, currentCountries);
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-  const updates = JSON.parse(text);
-
-  const updatedCount = Object.keys(updates).length;
-  console.log(`[LLM] Country updates: ${updatedCount}/${COUNTRY_IDS.length} countries updated`);
-  return updates;
-}
-
-// ── Connections 업데이트 ──
-
 function buildConnectionsPrompt(articles) {
   const articleList = articles.slice(0, 700).map(a =>
     `${a.tierTag} [${a.date}] [${a.countries?.join(',')||''}] [${a.source}] ${a.title}`
@@ -227,7 +155,6 @@ function buildConnectionsPrompt(articles) {
   const connectionsPath = new URL('../connections.json', import.meta.url);
   const connections = JSON.parse(readFileSync(connectionsPath, 'utf8'));
 
-  // 주요 관계만 추출 (프롬프트 크기 제한)
   const connContext = connections.map(c => ({
     key: `${c.from}-${c.to}`,
     from: c.from,
@@ -246,13 +173,14 @@ function buildConnectionsPrompt(articles) {
 뉴스에서 변화가 감지된 양자관계의 note, watch, keyItems를 갱신하세요.
 
 ## 규칙
-1. 뉴스에서 실제로 언급되거나 영향받는 관계만 업데이트하세요
-2. 최소 5개 이상의 관계를 업데이트하세요
+1. 뉴스에서 실제로 언급되거나 영향받는 관계만 업데이트
+2. 최소 5개 이상의 관계를 업데이트
 3. note: 현재 양자관계 상태 요약, 한국어, 100자 이내
 4. watch: 향후 주목할 이벤트와 투자 시사점, 한국어, 80자 이내
 5. keyItems: 핵심 이슈 2~4개, 각각 {l: "라벨", v: "현재 상태"} 형식
 
-## 출력 형식
+## 출력 형식 (매우 중요)
+반드시 순수 JSON 객체만 반환하세요. 설명이나 코드블록 마커 없이 JSON만.
 키는 반드시 "from-to" 형식 (예: "us-cn", "ru-ua")
 
 출력 예시:
@@ -271,21 +199,36 @@ ${JSON.stringify(connContext, null, 2)}
 ${articleList}`;
 }
 
+// ── LLM 호출 ──
+
+export async function generateNews(articles) {
+  console.log('[LLM] Generating news...');
+  const prompt = buildNewsPrompt(articles);
+  const text = await callClaude(prompt, 4096);
+  const news = JSON.parse(extractJson(text));
+  console.log(`[LLM] News generated: ${news.length} items`);
+  return news;
+}
+
+export async function generateCountryUpdates(articles) {
+  console.log('[LLM] Generating country updates...');
+  const countriesPath = new URL('../countries.json', import.meta.url);
+  const currentCountries = JSON.parse(readFileSync(countriesPath, 'utf8'));
+
+  const prompt = buildCountryUpdatesPrompt(articles, currentCountries);
+  const text = await callClaude(prompt, 8192);
+  const updates = JSON.parse(extractJson(text));
+
+  const updatedCount = Object.keys(updates).length;
+  console.log(`[LLM] Country updates: ${updatedCount}/${COUNTRY_IDS.length} countries updated`);
+  return updates;
+}
+
 export async function generateConnectionUpdates(articles) {
   console.log('[LLM] Generating connection updates...');
-
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.3
-    }
-  });
-
   const prompt = buildConnectionsPrompt(articles);
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-  const updates = JSON.parse(text);
+  const text = await callClaude(prompt, 4096);
+  const updates = JSON.parse(extractJson(text));
 
   const updatedCount = Object.keys(updates).length;
   console.log(`[LLM] Connection updates: ${updatedCount} relations updated`);
