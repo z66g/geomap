@@ -27,6 +27,9 @@ async function callClaude(prompt, maxTokens = 4096) {
     temperature: 0.3,
     messages: [{ role: 'user', content: prompt }]
   });
+  if (msg.stop_reason === 'max_tokens') {
+    throw new Error(`Response truncated at max_tokens=${maxTokens}. Increase limit.`);
+  }
   return msg.content[0].text;
 }
 
@@ -204,7 +207,7 @@ ${articleList}`;
 export async function generateNews(articles) {
   console.log('[LLM] Generating news...');
   const prompt = buildNewsPrompt(articles);
-  const text = await callClaude(prompt, 4096);
+  const text = await callClaude(prompt, 8192);
   const news = JSON.parse(extractJson(text));
   console.log(`[LLM] News generated: ${news.length} items`);
   return news;
@@ -216,7 +219,7 @@ export async function generateCountryUpdates(articles) {
   const currentCountries = JSON.parse(readFileSync(countriesPath, 'utf8'));
 
   const prompt = buildCountryUpdatesPrompt(articles, currentCountries);
-  const text = await callClaude(prompt, 8192);
+  const text = await callClaude(prompt, 32000);
   const updates = JSON.parse(extractJson(text));
 
   const updatedCount = Object.keys(updates).length;
@@ -227,7 +230,7 @@ export async function generateCountryUpdates(articles) {
 export async function generateConnectionUpdates(articles) {
   console.log('[LLM] Generating connection updates...');
   const prompt = buildConnectionsPrompt(articles);
-  const text = await callClaude(prompt, 4096);
+  const text = await callClaude(prompt, 16000);
   const updates = JSON.parse(extractJson(text));
 
   const updatedCount = Object.keys(updates).length;
